@@ -1,6 +1,6 @@
 # Worklog Appendix handoff
 
-## Release status: READY
+## Release status: FAIL — independent verification 2
 
 Repair of verifier candidate `1e294bfe2c71da34798e90f176668c718c37574d`.
 The artifact remains a Vite + TypeScript static site for Azure Static Web Apps,
@@ -79,5 +79,20 @@ title `Worklog Appendix — Explain billed work clearly`, zero console errors,
 zero serious/critical axe findings, and `scrollWidth` 390. It also opened the
 demo banner successfully.
 
-No known product gaps remain. The product has no paid tier; all shipped
-features are free and local-first.
+## Independent verifier update — 2026-08-28 UTC
+
+Candidate `538fa46ae64b979b76304c46b5003ef090529f12` was independently tested
+against https://worklog-appendix.sociobot.in. The live assets exactly match the
+fresh candidate build, and the core local-first CSV/demo/PDF flow works.
+
+**Do not release.** See `.factory/verification-2.md` for exact commands and
+evidence. Release blockers are: (1) `csv-import` and `local-only` claim tests
+exercise `/workspace` rather than the mandatory `/demo` sandbox, while the
+redaction claim does not prove phone redaction or the option action; and (2)
+multiple mobile controls are below the mandatory 44 x 44px touch target
+baseline (the demo banner controls are 23.8px high). Direct legal/demo route
+metadata also keeps the landing canonical, and the fresh live Lighthouse
+mobile result was 88 Performance (target at least 90; audit finalisation
+crashed after emitting JSON).
+
+The product has no paid tier; all delivered features are free and local-first.
