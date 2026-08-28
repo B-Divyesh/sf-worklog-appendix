@@ -69,5 +69,15 @@ Deploy the built artifact with:
 /opt/fleet/lib/deploy-static.sh worklog-appendix dist
 ```
 
+Deployed 2026-08-28 UTC with deployment ID
+`6062da25-a09e-422c-ae35-a10a77414269` to
+`https://worklog-appendix.sociobot.in`. Live evidence: `/demo` returned 200;
+`/missing-qaverify-20260828` returned the styled page with 404; the live CSP
+has `connect-src 'self'`; and live JS, CSS, and hero-WebP SHA-256 values match
+the files in `dist/`. A 390px live Chromium check found one h1, `lang="en"`,
+title `Worklog Appendix — Explain billed work clearly`, zero console errors,
+zero serious/critical axe findings, and `scrollWidth` 390. It also opened the
+demo banner successfully.
+
 No known product gaps remain. The product has no paid tier; all shipped
 features are free and local-first.
