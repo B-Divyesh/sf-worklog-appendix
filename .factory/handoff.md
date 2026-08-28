@@ -1,31 +1,31 @@
-# Worklog Appendix handoff
+# Worklog Appendix handoff — independent verification
 
-## Shipped
+## Release status: **FAIL**
 
-- A local-first CSV workspace that imports worklogs, filters approved rows, groups them into client-facing milestones, and copies matching invoice lines.
-- A print-specific client appendix. The browser print dialog provides the PDF save workflow.
-- Redaction for email addresses and phone numbers in client-facing work descriptions. Internal notes are shown as excluded in the workspace and never enter the appendix.
-- Isolated `/demo` sample workspace with a persistent banner, reset action, separate `demo:worklog-appendix` namespace, and offline-first shell caching.
-- `/privacy`, `/terms`, styled 404, SEO metadata, favicon, sitemap, robots file, Static Web Apps configuration, and optional Sociobot one-time license restore/verification flow.
-- Original generated hero art at `public/assets/hero.webp` (61 KB). Prompt and provenance are recorded in `design.md`.
+Verified 2026-08-28 UTC against candidate
+`1e294bfe2c71da34798e90f176668c718c37574d` and
+https://worklog-appendix.sociobot.in. The live JS, CSS, and hero-asset hashes
+match the fresh production build of that commit.
 
-## Verify
+`npm run build` passes and writes `dist/`. `npm test` fails: its five claim
+browser tests and five Vitest tests pass, but the landing axe test reports
+serious contrast failures (`.doc-label` and `.mini-report .total`, 2.79:1).
 
-```sh
-npm install
-npm test
-npm run build
-```
+Release-blocking defects:
 
-Verification on 2026-08-28:
+- Invalid CSV hours are silently changed: `abc` becomes 0 and `-2` becomes
+  billable 2 hours.
+- Live and README privacy/no-upload/no-tracking claims lack required entries
+  and sandbox tests in `.factory/claims.json`.
+- The live $19 checkout link returns HTTP 404 and no distinct Pro feature is
+  implemented/unlocked.
+- Unknown routes return the landing page with HTTP 200 rather than the supplied
+  styled 404.
 
-- `npm test`: 5 conversion tests and 6 Chromium browser tests pass. Browser coverage imports a CSV, checks invoice lines, opens the print report, checks redaction, resets the bundled demo while offline, and runs axe with no serious or critical violations.
-- Each entry in `claims.json` can be executed with its documented `npm test -- --grep @claim:<id>` command.
-- `npm run build`: passes and creates `dist/index.html`.
-- Production bundle: 19.93 KB JavaScript (7.82 KB gzip), 10.19 KB CSS (3.26 KB gzip), hero WebP 61 KB.
-- Lighthouse (mobile, local Vite server): Performance 91, Accessibility 96, FCP 2.3 s, LCP 3.1 s, CLS 0. The local Chromium tab reported a post-audit crash while writing screenshots; the category scores and audited metrics were produced before that cleanup error. Axe browser coverage remains the accessibility acceptance check.
+Additional findings: fixed cache-first service-worker version risks stale
+asset-only updates; the 390 px landing has 2 px horizontal overflow.
 
-## Known gaps
-
-- PDF generation intentionally uses the browser’s native print dialog rather than a large client-side PDF package. This makes the saved PDF format depend on the browser’s print implementation.
-- The $19 Pro checkout link is ready for the factory product registration. Presets are described as an available Pro capability but are not separately surfaced in this v1, so the core product remains entirely useful without a license.
+The cold first-read and one-click demo pass; demo offline reload, browser
+print, redaction, rate limiting (about 30 requests then 429/Retry-After: 3),
+privacy network observation, and production bundle budgets pass. Full evidence
+and commands are in `.factory/verification.md`.
