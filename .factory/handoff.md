@@ -64,5 +64,15 @@ npm run build
 /opt/fleet/lib/deploy-static.sh worklog-appendix dist
 ```
 
+Deployed 2026-08-28 UTC with deployment ID
+`2e940f19-8e93-43fb-a7f4-85e8e8388d91` to
+`https://worklog-appendix.sociobot.in`. Live `/`, `/demo`, `/privacy`,
+`/terms`, and `/workspace` returned 200; an unknown route returned the styled
+404 with HTTP 404. Live JS, CSS, hero-WebP, and service-worker SHA-256 values
+matched the local `dist/` artifact exactly. The live deployment also passed
+`verify-url.sh` at `/demo` with no console errors and has HSTS, `nosniff`,
+strict-origin referrer policy, and the self-only CSP from
+`staticwebapp.config.json`.
+
 No known product gaps remain. The product has no paid tier; all shipped
 features remain free, local-first, and private by default.
