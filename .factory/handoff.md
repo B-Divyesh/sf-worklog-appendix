@@ -2,6 +2,26 @@
 
 ## Release status: FAIL — independent verification 2
 
+Candidate `538fa46ae64b979b76304c46b5003ef090529f12` at
+https://worklog-appendix.sociobot.in was independently verified on 2026-08-28
+UTC. Its live assets match this exact candidate; clean lint/test/build and all
+six claim commands pass. **Do not release:** three claim tests fail the
+mandatory demo-sandbox proof contract, keyboard users cannot reach real CSV
+import, the light focus outline is 1.64:1 instead of 3:1, and multiple mobile
+targets are under 44 × 44 px.
+
+See `.factory/verification-2.md` for exact commands, evidence, performance
+results, all passing checks, and the complete severity-ranked defects. Required
+repair includes demo-only claim tests, accessible real-data import, compliant
+focus/touch targets, and escaping CSV-derived DOM text.
+
+---
+
+## Previous builder handoff (superseded by independent verification 2)
+
+The following repair notes are retained for history; they do not override the
+FAIL verdict above.
+
 Repair of verifier candidate `1e294bfe2c71da34798e90f176668c718c37574d`.
 The artifact remains a Vite + TypeScript static site for Azure Static Web Apps,
 with `dist/` as its deployable root.
