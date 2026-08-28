@@ -8,6 +8,11 @@ describe('worklog conversion', () => {
     expect(rows[0].description).toBe('Fixed, reviewed, and shipped');
     expect(groups(rows)).toEqual([expect.objectContaining({ name:'Release', hours:2 })]);
   });
+  it('rejects malformed and negative hours instead of changing invoice totals', () => {
+    for (const value of ['abc', '-2', '2 hours', '']) {
+      expect(() => parseWorklogCsv(`Description,Hours\nTask,${value}`)).toThrow('Row 2 has an invalid Hours value. Use a zero or positive number, then import the file again.');
+    }
+  });
   it('produces one matching line for every milestone', () => {
     const lines=invoiceLines(sampleRows);
     expect(lines).toContain('Client portal — 8 hours');

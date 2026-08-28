@@ -2,7 +2,7 @@
 
 Worklog Appendix turns approved worklog CSV rows into a client-readable invoice appendix and matching invoice lines. It is for freelancers who need to explain billed hours without sending a raw timesheet.
 
-The app runs locally in the browser. It does not upload CSV files, require an account, track time, or send invoices.
+The app runs locally in the browser. It does not upload CSV files, require an account, or use analytics or advertising trackers.
 
 ## Run it
 
@@ -32,13 +32,13 @@ npm run build
 
 ## Deploy
 
-This is a Vite static site for Azure Static Web Apps. Deploy the `dist/` directory after `npm run build`. `public/staticwebapp.config.json` supplies SPA fallback, cache headers, security headers, and the styled 404 response.
+This is a Vite static site for Azure Static Web Apps. Deploy the `dist/` directory after `npm run build`. `public/staticwebapp.config.json` supplies known app-route rewrites, cache headers, security headers, and the styled 404 response.
 
-## Privacy and optional Pro license
+## Privacy
 
 Report data is kept in browser storage only when you work outside the demo. The demo uses a separate temporary namespace and never saves work as real data. See `/privacy` and `/terms` for details.
 
-The free product includes CSV import, client redaction, invoice lines, and PDF printing. An optional $19 one-time Pro license uses the Sociobot checkout and license verification endpoint. It does not gate the core export.
+The product includes CSV import, client redaction, invoice lines, and PDF printing at no cost.
 
 ## License
 

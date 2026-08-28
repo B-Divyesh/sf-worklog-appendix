@@ -1,1 +1,11 @@
 :root { --sun: #834400; }
+
+/* The translucent preview sits over the dark report field, so its labels need
+   a darker lagoon treatment than labels on the paper surface. */
+.mini-report .doc-label,
+.mini-report .total { color: #005a63; }
+
+@media (max-width: 760px) {
+  /* Keep the decorative report frame inside the phone viewport. */
+  .hero figure::before { right: 0; }
+}

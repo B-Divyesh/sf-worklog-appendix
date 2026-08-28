@@ -9,7 +9,7 @@
 | See a ready-to-print appendix. | 5 | pass |
 | Your CSV stays in this browser. | 6 | pass |
 | No account or upload. | 4 | pass |
-| Free core export. Pro $19 once. | 6 | pass |
+| Free core export. | 3 | pass |
 | Turn rows of work into a readable client document. | 9 | pass |
 | One invoice summary. One readable appendix. | 6 | pass |
 | Group approved rows by milestone. | 5 | pass |
@@ -23,9 +23,6 @@
 | It is not a time tracker | 7 | pass |
 | Worklog Appendix does not run timers, invoice clients, or monitor anyone. | 11 | pass |
 | It only turns the worklog you choose into a client-facing companion. | 11 | pass |
-| Pro costs $19 once. | 4 | pass |
-| It adds saved report presets when available. | 7 | pass |
-| No export or redaction feature is locked. | 7 | pass |
 
 No banned terms appear in the landing copy.
 

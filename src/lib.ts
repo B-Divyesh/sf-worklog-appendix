@@ -32,7 +32,16 @@ export function parseWorklogCsv(source: string): Worklog[] {
   const rows = csvRows(source); if (rows.length < 2) throw new Error('This file needs a header row and at least one worklog row.');
   const headers = rows[0].map(h => h.toLowerCase().trim());
   if (!headers.some(h => keys.description.includes(h)) || !headers.some(h => keys.hours.includes(h))) throw new Error('Add Description and Hours columns, then import the file again.');
-  return rows.slice(1).map((values, i) => { const record = Object.fromEntries(headers.map((h,n) => [h, values[n] || ''])); const rawHours = get(record,'hours').replace(/[^0-9.]/g,''); const hours = Number(rawHours); if (!Number.isFinite(hours)) throw new Error(`Row ${i + 2} has an hours value that cannot be read.`); const status = get(record,'status').toLowerCase() || 'approved'; return { id:`import-${Date.now()}-${i}`, date:get(record,'date') || 'Undated', project:get(record,'project') || 'Project', milestone:get(record,'milestone') || get(record,'project') || 'Work completed', description:get(record,'description'), hours, rate:Number(get(record,'rate').replace(/[^0-9.]/g,'')) || undefined, status, notes:get(record,'notes'), included: status === 'approved' }; });
+  return rows.slice(1).map((values, i) => {
+    const record = Object.fromEntries(headers.map((h,n) => [h, values[n] || '']));
+    const rawHours = get(record,'hours').trim();
+    const hours = Number(rawHours);
+    if (!/^(?:0|[1-9]\d*)(?:\.\d+)?$/.test(rawHours) || !Number.isFinite(hours) || hours < 0) {
+      throw new Error(`Row ${i + 2} has an invalid Hours value. Use a zero or positive number, then import the file again.`);
+    }
+    const status = get(record,'status').toLowerCase() || 'approved';
+    return { id:`import-${Date.now()}-${i}`, date:get(record,'date') || 'Undated', project:get(record,'project') || 'Project', milestone:get(record,'milestone') || get(record,'project') || 'Work completed', description:get(record,'description'), hours, rate:Number(get(record,'rate').replace(/[^0-9.]/g,'')) || undefined, status, notes:get(record,'notes'), included: status === 'approved' };
+  });
 }
 export function safeText(value: string, redact: boolean) { return redact ? value.replace(/[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}/g, '[email removed]').replace(/(?:\+?\d[\d .()-]{7,}\d)/g, '[phone removed]') : value; }
 export function groups(rows: Worklog[]) { const map = new Map<string, Worklog[]>(); rows.filter(r => r.included).forEach(r => map.set(r.milestone || 'Work completed', [...(map.get(r.milestone || 'Work completed') || []), r])); return [...map.entries()].map(([name, items]) => ({ name, items, hours: items.reduce((n,r) => n + r.hours,0), amount: items.reduce((n,r) => n + r.hours * (r.rate || 0),0) })); }
