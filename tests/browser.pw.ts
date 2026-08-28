@@ -3,7 +3,7 @@ import AxeBuilder from '@axe-core/playwright';
 import { readFileSync } from 'node:fs';
 
 test('@claim:csv-import imports a CSV into the local workspace', async ({ page }) => {
-  await page.goto('/workspace');
+  await page.goto('/demo');
   await page.locator('#csv-file').setInputFiles({name:'hours.csv',mimeType:'text/csv',buffer:Buffer.from('Date,Description,Hours,Milestone,Status\n2026-08-01,Prepared handoff,2,Release,approved')});
   await expect(page.getByText('Imported 1 rows from hours.csv.')).toBeVisible();
   await expect(page.getByRole('article').getByText('Prepared handoff', {exact:true})).toBeVisible();
@@ -23,7 +23,20 @@ test('@claim:pdf-appendix opens a print-ready appendix', async ({ page }) => {
 });
 test('@claim:redaction removes personal detail from the report view', async ({ page }) => {
   await page.goto('/demo');
-  await expect(page.getByText('Internal note kept out of the report: Email change request came from [email removed]')).toBeVisible();
+  await page.locator('#csv-file').setInputFiles({
+    name: 'contact-details.csv',
+    mimeType: 'text/csv',
+    buffer: Buffer.from('Description,Hours\n"Send the update to sam@example.com or +1 (555) 444-1212",2')
+  });
+  const report = page.locator('.report-panel');
+  await page.getByLabel('Remove email and phone detail').uncheck();
+  await expect(report).toContainText('sam@example.com');
+  await expect(report).toContainText('+1 (555) 444-1212');
+  await page.getByLabel('Remove email and phone detail').check();
+  await expect(report).toContainText('[email removed]');
+  await expect(report).toContainText('[phone removed]');
+  await expect(report).not.toContainText('sam@example.com');
+  await expect(report).not.toContainText('+1 (555) 444-1212');
 });
 test('@claim:offline-demo works after first visit with no external requests', async ({ page, context }) => {
   const external: string[] = [];
@@ -31,9 +44,13 @@ test('@claim:offline-demo works after first visit with no external requests', as
   await page.goto('/demo');
   await expect(page.locator('body')).toContainText('Northstar Studio');
   await page.evaluate(() => navigator.serviceWorker.ready);
-  await expect.poll(() => page.evaluate(async () => (await Promise.all(performance.getEntriesByType('resource').map(entry => caches.match(entry.name)))).every(Boolean))).toBe(true);
+  // A navigation after activation makes the page service-worker controlled.
+  await page.reload();
+  await expect(page.getByText('Northstar Studio').first()).toBeVisible();
   await context.setOffline(true);
   await page.getByRole('button',{name:'Reset demo'}).click();
+  await expect(page.getByText('Northstar Studio').first()).toBeVisible();
+  await page.reload();
   await expect(page.getByText('Northstar Studio').first()).toBeVisible();
   expect(external).toEqual([]);
 });
@@ -43,14 +60,14 @@ test('@claim:local-only keeps imported CSV data in the browser with no external 
   page.on('request', request => {
     if (new URL(request.url()).origin !== 'http://127.0.0.1:4173') external.push(request.url());
   });
-  await page.goto('/workspace');
+  await page.goto('/demo');
   await page.locator('#csv-file').setInputFiles({
     name: 'private-hours.csv',
     mimeType: 'text/csv',
     buffer: Buffer.from('Description,Hours\nPrepared private estimate,2')
   });
   await expect(page.getByText('Imported 1 rows from private-hours.csv.')).toBeVisible();
-  await expect.poll(() => page.evaluate(() => localStorage.getItem('worklog-appendix'))).toContain('Prepared private estimate');
+  await expect.poll(() => page.evaluate(() => localStorage.getItem('demo:worklog-appendix'))).toBeNull();
   expect(external).toEqual([]);
 });
 
@@ -74,6 +91,22 @@ test('invalid or negative CSV hours are rejected with a recovery instruction', a
   await expect(page.locator('.work-row > b')).toHaveText('2 h');
 });
 
+test('imported CSV text is displayed as text, never interpreted as markup', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('console', message => { if (message.type() === 'error') errors.push(message.text()); });
+  await page.goto('/workspace');
+  await page.locator('#csv-file').setInputFiles({
+    name: 'hostile.csv',
+    mimeType: 'text/csv',
+    buffer: Buffer.from('Description,Hours,Milestone\n<img src=x>,2,<b>Release</b>')
+  });
+  await expect(page.locator('.work-row')).toContainText('<img src=x>');
+  await expect(page.locator('.work-row')).toContainText('<b>Release</b>');
+  await expect(page.locator('.work-row img')).toHaveCount(0);
+  await expect(page.locator('.work-row b')).toHaveCount(1);
+  expect(errors).toEqual([]);
+});
+
 test('the landing page does not overflow a 390px viewport', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
@@ -91,21 +124,65 @@ test('keyboard users can reach and use the skip link without console errors', as
   expect(errors).toEqual([]);
 });
 
+test('keyboard users can Tab to the visible CSV picker and open it with Enter or Space', async ({ page }) => {
+  for (const key of ['Enter', ' ']) {
+    await page.goto('/workspace');
+    const picker = page.locator('#csv-file');
+    for (let index = 0; index < 16 && !await picker.evaluate(element => element === document.activeElement); index++) await page.keyboard.press('Tab');
+    await expect(picker).toBeFocused();
+    await expect(picker).toBeVisible();
+    const chooser = page.waitForEvent('filechooser');
+    await page.keyboard.press(key);
+    await chooser;
+  }
+});
+
+test('390px controls meet the 44px touch and high-contrast focus baselines', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/demo');
+  for (const locator of [page.getByRole('button', {name:'Reset demo'}), page.getByRole('button', {name:'Start for real'}), page.locator('footer a')]) {
+    const count = await locator.count();
+    for (let index = 0; index < count; index++) {
+      const box = await locator.nth(index).boundingBox();
+      expect(box?.width).toBeGreaterThanOrEqual(44);
+      expect(box?.height).toBeGreaterThanOrEqual(44);
+    }
+  }
+  await page.locator('#redact').focus();
+  expect(await page.locator('#redact').evaluate(element => getComputedStyle(element).outlineColor)).toBe('rgb(0, 90, 99)');
+  const checkbox = await page.locator('#redact').boundingBox();
+  expect(checkbox?.width).toBeGreaterThanOrEqual(44);
+  expect(checkbox?.height).toBeGreaterThanOrEqual(44);
+  await page.locator('[data-milestone]').first().focus();
+  const select = await page.locator('[data-milestone]').first().boundingBox();
+  expect(select?.height).toBeGreaterThanOrEqual(44);
+});
+
 test('the production service worker has a release-specific cache and retires old caches', () => {
   const worker = readFileSync('dist/sw.js', 'utf8');
   expect(worker).not.toContain('__CACHE_VERSION__');
   expect(worker).toMatch(/worklog-appendix-[a-f0-9]{12}/);
   expect(worker).toContain("key.startsWith(CACHE_PREFIX) && key !== CACHE");
   expect(worker).toContain("event.request.mode === 'navigate'");
+  expect(worker).toMatch(/assets\/main-[^"]+\.js/);
+  expect(worker).toMatch(/assets\/main-[^"]+\.css/);
 });
 
 test('the Static Web Apps configuration serves only known SPA routes and a real 404', () => {
   const config = JSON.parse(readFileSync('public/staticwebapp.config.json', 'utf8'));
   expect(config.navigationFallback).toBeUndefined();
   for (const path of ['/demo', '/privacy', '/terms', '/workspace']) {
-    expect(config.routes).toContainEqual(expect.objectContaining({ route: path, rewrite: '/index.html' }));
+    expect(config.routes).toContainEqual(expect.objectContaining({ route: path, rewrite: `${path}/index.html` }));
   }
   expect(config.responseOverrides['404']).toEqual({ rewrite: '/404.html', statusCode: 404 });
+});
+
+test('direct route documents have route-specific canonical metadata before JavaScript runs', () => {
+  for (const [path, title] of [['demo', 'Demo — Worklog Appendix'], ['privacy', 'Privacy — Worklog Appendix'], ['terms', 'Terms — Worklog Appendix']] as const) {
+    const source = readFileSync(`dist/${path}/index.html`, 'utf8');
+    expect(source).toContain(`<title>${title}</title>`);
+    expect(source).toContain(`https://worklog-appendix.sociobot.in/${path}`);
+  }
 });
 
 test('landing has a usable document outline and no serious axe violations', async ({ page }) => {
@@ -113,6 +190,13 @@ test('landing has a usable document outline and no serious axe violations', asyn
   await expect(page).toHaveTitle('Worklog Appendix — Explain billed work clearly');
   await expect(page.locator('html')).toHaveAttribute('lang','en');
   await expect(page.locator('main h1')).toHaveCount(1);
+  const results = await new AxeBuilder({page}).analyze();
+  expect(results.violations.filter(item => ['serious','critical'].includes(item.impact || ''))).toEqual([]);
+});
+
+test('dark treatment keeps the landing page free of serious axe violations', async ({ page }) => {
+  await page.emulateMedia({ colorScheme: 'dark' });
+  await page.goto('/');
   const results = await new AxeBuilder({page}).analyze();
   expect(results.violations.filter(item => ['serious','critical'].includes(item.impact || ''))).toEqual([]);
 });

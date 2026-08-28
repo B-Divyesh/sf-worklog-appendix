@@ -9,3 +9,79 @@
   /* Keep the decorative report frame inside the phone viewport. */
   .hero figure::before { right: 0; }
 }
+
+/* Ink focus rings pass against the paper and glass surfaces. */
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible { outline-color: #005a63; }
+
+/* Inline controls stay comfortably tappable without changing their copy. */
+.demo-banner button,
+footer a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+}
+.demo-banner button { margin-left: .35rem; }
+
+/* The native chooser stays visible, focusable, and operable by Enter/Space. */
+.file-picker {
+  display: inline-flex;
+  align-items: center;
+  gap: .55rem;
+  min-height: 44px;
+  padding: .3rem .4rem .3rem 1rem;
+  border: 1px solid var(--lagoon);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--ink);
+  font-weight: 720;
+  cursor: pointer;
+}
+.file-picker input { max-width: 12.5rem; min-height: 38px; color: var(--ink); }
+.file-picker input::file-selector-button {
+  min-height: 34px;
+  margin-right: .45rem;
+  padding: .3rem .65rem;
+  border: 0;
+  border-radius: 999px;
+  background: var(--mist);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 720;
+  cursor: pointer;
+}
+
+/* Compact row glyphs retain 44px touch targets. */
+.include { display: grid; width: 44px; height: 44px; margin: -.8rem; place-items: center; }
+.include input { width: 20px; height: 20px; }
+.milestone-label select { min-height: 44px; }
+
+/* Native checkbox controls themselves receive a full touch-sized box. */
+.setup .check input { width: 44px; height: 44px; min-height: 44px; }
+
+/* The documented dark treatment preserves the document desk hierarchy. */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink: #f6f7f2;
+    --paper: #10233b;
+    --mist: #173552;
+    --glass: rgba(23, 53, 82, .94);
+    --muted: #c4d9dd;
+    --line: #55758a;
+    --lagoon: #8ed6dc;
+  }
+  body { background: radial-gradient(circle at 84% 13%, #173552 0, transparent 24rem), var(--paper); }
+  .file-picker,
+  .setup input,
+  .setup select,
+  .milestone-label select,
+  .report-panel textarea { background: #173552; color: var(--ink); }
+  .file-picker input { color: var(--ink); }
+  .file-picker input::file-selector-button { background: #31546b; color: var(--ink); }
+  .copy { background: #31546b; color: var(--ink); }
+  .demo-banner { background: #3d2b0a; color: #fff2cf; border-color: #c88a24; }
+}

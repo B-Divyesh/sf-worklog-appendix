@@ -15,7 +15,7 @@ Worklogs are often messy evidence. This interface turns them into a calm, legibl
 - `plum` #704B72 — internal-note/redaction state
 - `danger` #B33A3A — errors
 
-The dark treatment uses `ink` as the ground, `#173552` for surfaces, and preserves warm sun controls for contrast.
+The dark treatment uses `ink` as the ground, `#173552` for surfaces, and preserves warm sun controls for contrast. It follows the device color preference and keeps the document panes, inputs, and report preview legible without a remote font or asset request.
 
 ### Type and rhythm
 
@@ -23,7 +23,7 @@ The UI uses the self-hosted system font stack (no network font request): Georgia
 
 ### Interaction and motion
 
-Sheets rise into view with a 180 ms opacity/translate transition. Milestone rows illuminate when selected; this explains the grouping relationship. Under reduced motion, all states appear instantly. Focus uses a 3 px sun outline.
+Sheets rise into view with a 180 ms opacity/translate transition. Milestone rows illuminate when selected; this explains the grouping relationship. Under reduced motion, all states appear instantly. Focus uses a 3 px deep-lagoon outline, chosen to clear 3:1 contrast on both paper and glass surfaces.
 
 ### Art plan and provenance
 

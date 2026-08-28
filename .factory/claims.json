@@ -1,8 +1,8 @@
 [
-  {"id":"csv-import","claim":"Imports a worklog CSV with descriptions and hours.","where":"workspace import action, README","test":"npm test -- --grep @claim:csv-import","sandbox":"shipped sample data and a quoted CSV row"},
+  {"id":"csv-import","claim":"Imports a worklog CSV with descriptions and hours.","where":"workspace import action, README","test":"npm test -- --grep @claim:csv-import","sandbox":"fresh /demo with shipped sample data and a quoted CSV row"},
   {"id":"invoice-lines","claim":"Creates matching invoice lines for each milestone.","where":"workspace preview, README","test":"npm test -- --grep @claim:invoice-lines","sandbox":"sample workspace"},
   {"id":"pdf-appendix","claim":"Prints a client-readable appendix for saving as PDF.","where":"workspace primary action, README","test":"npm test -- --grep @claim:pdf-appendix","sandbox":"sample workspace; inspect print document"},
-  {"id":"redaction","claim":"Can remove email and phone detail from the client report.","where":"workspace redaction option, README","test":"npm test -- --grep @claim:redaction","sandbox":"sample text with email and phone number"},
+  {"id":"redaction","claim":"Can remove email and phone detail from the client report.","where":"workspace redaction option, README","test":"npm test -- --grep @claim:redaction","sandbox":"fresh /demo sample plus imported email and phone text"},
   {"id":"offline-demo","claim":"The sample workspace is available after the first visit offline.","where":"demo documentation","test":"npm test -- --grep @claim:offline-demo","sandbox":"sample is bundled and service worker caches the app shell"},
-  {"id":"local-only","claim":"CSV imports stay in this browser; no account, upload, analytics, or advertising tracker is used.","where":"landing facts, Privacy page, README","test":"npm test -- --grep @claim:local-only","sandbox":"fresh workspace; import a CSV while recording every request and inspect browser storage"}
+  {"id":"local-only","claim":"CSV imports stay in this browser; no account, upload, analytics, or advertising tracker is used.","where":"landing facts, Privacy page, README","test":"npm test -- --grep @claim:local-only","sandbox":"fresh /demo; import a CSV while recording every request and inspect the demo-only storage namespace"}
 ]

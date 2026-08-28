@@ -2,10 +2,10 @@
   "responseOverrides": {"404":{"rewrite":"/404.html","statusCode":404}},
   "globalHeaders": {"X-Content-Type-Options":"nosniff","Referrer-Policy":"strict-origin-when-cross-origin","Content-Security-Policy":"default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; base-uri 'self'; form-action 'self'"},
   "routes": [
-    {"route":"/demo","rewrite":"/index.html"},
-    {"route":"/privacy","rewrite":"/index.html"},
-    {"route":"/terms","rewrite":"/index.html"},
-    {"route":"/workspace","rewrite":"/index.html"},
+    {"route":"/demo","rewrite":"/demo/index.html"},
+    {"route":"/privacy","rewrite":"/privacy/index.html"},
+    {"route":"/terms","rewrite":"/terms/index.html"},
+    {"route":"/workspace","rewrite":"/workspace/index.html"},
     {"route":"/assets/*","headers":{"Cache-Control":"public, max-age=31536000, immutable"}}
   ]
 }

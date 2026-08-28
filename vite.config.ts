@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { readFile, readdir, writeFile } from 'node:fs/promises';
-import { join, relative } from 'node:path';
+import { join, relative, resolve } from 'node:path';
 import { defineConfig } from 'vite';
 
 async function filesWithin(directory: string): Promise<string[]> {
@@ -13,6 +13,17 @@ async function filesWithin(directory: string): Promise<string[]> {
 }
 
 export default defineConfig({
+  build: {
+    rollupOptions: {
+      input: {
+        main: resolve(process.cwd(), 'index.html'),
+        demo: resolve(process.cwd(), 'demo/index.html'),
+        privacy: resolve(process.cwd(), 'privacy/index.html'),
+        terms: resolve(process.cwd(), 'terms/index.html'),
+        workspace: resolve(process.cwd(), 'workspace/index.html')
+      }
+    }
+  },
   plugins: [{
     name: 'version-service-worker-cache',
     async closeBundle() {
@@ -25,7 +36,14 @@ export default defineConfig({
       }
       const serviceWorker = join(output, 'sw.js');
       const source = await readFile(serviceWorker, 'utf8');
-      await writeFile(serviceWorker, source.replace('__CACHE_VERSION__', hash.digest('hex').slice(0, 12)));
+      const precache = files
+        .map(path => `/${relative(output, path).replaceAll('\\', '/')}`)
+        .filter(path => !path.endsWith('/sw.js'))
+        .map(path => JSON.stringify(path))
+        .join(', ');
+      await writeFile(serviceWorker, source
+        .replace('__CACHE_VERSION__', hash.digest('hex').slice(0, 12))
+        .replace('/* __PRECACHE_ASSETS__ */', precache));
     }
   }]
 });

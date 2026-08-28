@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { csvRows, parseWorklogCsv, sampleRows, groups, invoiceLines, reportMarkup, safeText } from '../src/lib';
+import { csvRows, parseWorklogCsv, sampleRows, groups, invoiceLines, reportMarkup, safeText, escapeHtml } from '../src/lib';
 
 describe('worklog conversion', () => {
   it('imports approved rows and keeps quoted descriptions', () => {
@@ -26,6 +26,14 @@ describe('worklog conversion', () => {
   });
   it('removes an email and phone detail from the client report', () => {
     expect(safeText('Ask sam@example.com or +1 (555) 444-1212',true)).toBe('Ask [email removed] or [phone removed]');
+  });
+  it('escapes imported text before it reaches the workspace or printable report', () => {
+    const hostile = '<img src=x onerror=alert(1)>';
+    expect(escapeHtml(hostile)).toBe('&lt;img src=x onerror=alert(1)&gt;');
+    const markup = reportMarkup([{ ...sampleRows[0], description: hostile }], {client:'<b>Client</b>',invoice:'INV',period:'August',redact:false});
+    expect(markup).toContain('&lt;img src=x onerror=alert(1)&gt;');
+    expect(markup).toContain('&lt;b&gt;Client&lt;/b&gt;');
+    expect(markup).not.toContain(hostile);
   });
   it('ships sample data without a network request', () => {
     expect(sampleRows.length).toBeGreaterThanOrEqual(8);
