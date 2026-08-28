@@ -1,14 +1,45 @@
 # Worklog Appendix
 
-Live: https://worklog-appendix.sociobot.in — built by the Param Factory (`static-web`).
+Worklog Appendix turns approved worklog CSV rows into a client-readable invoice appendix and matching invoice lines. It is for freelancers who need to explain billed hours without sending a raw timesheet.
 
-See `.factory/brief.json` for the researched problem this solves and `.factory/design.md` for the visual system.
+The app runs locally in the browser. It does not upload CSV files, require an account, track time, or send invoices.
 
-## Develop
+## Run it
 
-```
+```sh
 npm install
 npm run dev
-npm test
-npm run build   # -> dist/
 ```
+
+Open the local URL that Vite prints. Use `/demo` for the isolated sample workspace.
+
+## Use it
+
+1. Import a CSV with `Description` and `Hours` columns. `Date`, `Milestone`, `Status`, and `Internal Notes` are optional.
+2. Include the approved rows and choose client-friendly milestone names.
+3. Check the report preview, copy the matching invoice lines, then choose **Print appendix / save PDF**.
+
+The print dialog is the PDF export path. Choose “Save as PDF” in the browser dialog before attaching it to an invoice.
+
+## Check it
+
+```sh
+npm test
+npm run build
+```
+
+`npm test -- --grep @claim:csv-import` runs one named browser claim test. `npm run build` writes the static deployable site to `dist/`.
+
+## Deploy
+
+This is a Vite static site for Azure Static Web Apps. Deploy the `dist/` directory after `npm run build`. `public/staticwebapp.config.json` supplies SPA fallback, cache headers, security headers, and the styled 404 response.
+
+## Privacy and optional Pro license
+
+Report data is kept in browser storage only when you work outside the demo. The demo uses a separate temporary namespace and never saves work as real data. See `/privacy` and `/terms` for details.
+
+The free product includes CSV import, client redaction, invoice lines, and PDF printing. An optional $19 one-time Pro license uses the Sociobot checkout and license verification endpoint. It does not gate the core export.
+
+## License
+
+MIT. See [LICENSE](LICENSE).

@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://worklog-appendix.sociobot.in/sitemap.xml

@@ -1,0 +1,7 @@
+[
+  {"id":"csv-import","claim":"Imports a worklog CSV with descriptions and hours.","where":"workspace import action, README","test":"npm test -- --grep @claim:csv-import","sandbox":"shipped sample data and a quoted CSV row"},
+  {"id":"invoice-lines","claim":"Creates matching invoice lines for each milestone.","where":"workspace preview, README","test":"npm test -- --grep @claim:invoice-lines","sandbox":"sample workspace"},
+  {"id":"pdf-appendix","claim":"Prints a client-readable appendix for saving as PDF.","where":"workspace primary action, README","test":"npm test -- --grep @claim:pdf-appendix","sandbox":"sample workspace; inspect print document"},
+  {"id":"redaction","claim":"Can remove email and phone detail from the client report.","where":"workspace redaction option, README","test":"npm test -- --grep @claim:redaction","sandbox":"sample text with email and phone number"},
+  {"id":"offline-demo","claim":"The sample workspace is available after the first visit offline.","where":"demo documentation","test":"npm test -- --grep @claim:offline-demo","sandbox":"sample is bundled and service worker caches the app shell"}
+]
