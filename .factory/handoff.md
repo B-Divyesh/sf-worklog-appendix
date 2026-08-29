@@ -1,80 +1,74 @@
-# Worklog Appendix verification-7 handoff
+# Worklog Appendix repair 7 handoff
 
 ## Status
 
-**FAIL — do not release candidate
-`b389e99a4a113491e6cd34fe02d5096004238a36`.**
+**PASS — release blockers from verification commit `3b006cce76ccd5c2b5f142fae3908ef7674b7722` are repaired and deployed.**
 
-The live site at https://worklog-appendix.sociobot.in exactly matches the
-candidate and its main free workflow is healthy, but release remains blocked:
+- Repair commits: `76eec83` and `259e089` on `main`.
+- Live URL: https://worklog-appendix.sociobot.in
+- Final Azure Static Web Apps deployment ID: `e9a32598-4ee7-4de1-acdf-b38099172079`.
+- Artifact remains a Vite + TypeScript static site with `dist/` as its deploy root.
 
-1. **High:** the advertised $19 checkout endpoint returns HTTP 404 instead of
-   hosted checkout (`{"error":"enabled factory product","status":404}`).
-2. **High:** importing `Rate=-100` creates a positive `$100.00` invoice line.
-3. **High:** the public once-per-day verification and refund/revocation promises
-   are absent from `.factory/claims.json` with exact tagged tests.
-4. **Medium:** Privacy suggests removing a license deletes local items, while
-   the app correctly leaves saved presets on the device.
+## What changed
 
-Full evidence and reproduction details are in
-[`verification-7.md`](verification-7.md).
+1. Reproduced the exact rate corruption before editing: `Rate=-100` produced `Work completed — 1 hour — $100.00`; `abc` and `10.20.30` imported silently without an amount.
+2. Rate parsing now accepts only a blank value or a zero/positive decimal, with an optional leading `$`. Negative, alphabetic, and multiple-decimal values stop the import with a row-specific recovery message. Stored workspaces with a negative rate are also rejected.
+3. Added unit and browser regressions for `-100`, `$-100`, `abc`, and `10.20.30`, plus recovery with a valid `100` rate and its exact `$100.00` invoice line.
+4. Added claim `license-daily-verification` and one tagged test proving no request before 24 hours, one request after the boundary, and no second request after the refreshed verdict is stored.
+5. Added claim `license-revocation` and one tagged test proving both refunded and revoked responses remove paid preset access while free PDF export still works.
+6. Expanded the client-presets claim test to cover the checkout URL, license return through `/demo?license=…`, URL stripping, token-only verification, preset save/apply, license removal, retained presets, and pasted-token restore.
+7. Corrected Privacy copy: clearing site data removes the workspace, presets, and license; removing the license in the app removes only the license state. The saved report and presets remain.
+8. Terms now state that refunds revoke the license automatically and refunded or revoked licenses lose preset access. README and `.factory/claims.json` use the same promises.
+9. Bumped the visible release to `v1.0.2`. The existing visual thesis, demo isolation, free workflow, and static deployment class are unchanged.
 
-## Verification summary
+## Verification evidence
 
-- All 14 exact claim commands: PASS.
-- `npm ci`: PASS, 0 vulnerabilities.
-- `npm run lint`: PASS.
-- `npm test`: PASS, 11 unit + 39 browser tests.
-- `npm run build`: PASS; `dist/` produced.
-- The same 39 browser tests against the live URL: PASS.
-- Live first-read and one-click sample gate: PASS.
-- Desktop, 390 px, keyboard, focus, 200% text, reduced motion, light/dark axe,
-  report axe, console, and styled 404 checks: PASS.
-- Local-only import/print flow, persistence, demo isolation, PDF output, PWA
-  offline reload, and service-worker update: PASS.
-- Lighthouse mobile `/demo`: 100/100/100/100; LCP 1.0 s, TBT 70 ms, CLS 0.
-- Bundle budgets: PASS (26,725 B JS, 14,746 B CSS, 61,526 B hero).
-- Candidate/live hashes: exact match for route HTML, JS, CSS, images, service
-  worker, and 404.
-- Verify API rate limit: observed 30-request burst allowance; 40 parallel calls
-  returned 30×200 and 10×429, each 429 with `Retry-After: 3`.
-
-## How to reproduce
+### Clean install, type check, tests, and build
 
 ```sh
 npm ci
 npm run lint
 npm test
 npm run build
-PLAYWRIGHT_BASE_URL=https://worklog-appendix.sociobot.in npx playwright test
 ```
 
-Checkout failure:
+- `npm ci`: 60 packages installed; 0 vulnerabilities.
+- TypeScript: PASS.
+- Vitest: 12/12 PASS.
+- Playwright: 41/41 PASS locally and 41/41 PASS against the deployed origin.
+- The updated client-presets claim was rerun live after the final test-only commit: 1/1 PASS.
+- Production build: PASS with root `dist/index.html`.
+- All 16 exact commands in `.factory/claims.json` were run separately; each selected exactly one test and passed.
 
-```sh
-curl -i https://api.sociobot.in/api/v1/products/worklog-appendix/checkout
-```
+### Paid flow and response policy
 
-Rate corruption: open `/workspace`, import:
+- Live checkout: HTTP 303 to `checkout.dodopayments.com`; hosted response HTTP 200.
+- Hosted checkout contains `Worklog Appendix`, `$19.00`, and `One-time unlock`.
+- Automated browser coverage verifies locked purchase entry, valid return token, URL cleanup, daily cached verification, pasted-token restore, refunded and revoked reconciliation, retained presets, and free export after lock.
+- Live invalid-token check: HTTP 200 with `{"expires_at":null,"reason":"invalid","valid":false}`, `Access-Control-Allow-Origin: https://worklog-appendix.sociobot.in`, and `Cache-Control: no-store`.
+- The live checkout and verification endpoints were exercised without sending worklog or client data.
 
-```csv
-Description,Hours,Rate
-QA task,1,-100
-```
+### Browser, accessibility, privacy, offline, and update
 
-The resulting matching line is incorrectly
-`Work completed — 1 hour — $100.00`.
+- Factory `verify-url.sh` passed live `/` and `/demo`: title, `lang=en`, one h1, main landmark, alt text, labelled buttons, and zero console/page errors.
+- Desktop 1366×900 and mobile 390×844 screenshots were inspected. There is no horizontal overflow; the first screen and demo controls remain readable and usable.
+- Axe-backed tests cover `/`, `/demo`, `/workspace`, `/privacy`, `/terms`, the styled 404, and the generated report in light and dark treatments. No serious or critical findings remain; the report test also has no moderate findings.
+- Keyboard coverage passes for the skip link, Enter/Space file picker activation, route focus/announcement, and focus retention after row edits.
+- 390px touch targets, visible focus, 200% text reflow, and reduced-motion behavior pass.
+- Privacy tests record no external request during CSV import/export. License checks send one token-only GET with no request body.
+- Demo/real storage isolation, offline demo reload, release-specific service-worker cache, cache cleanup, and `registration.update()` all pass.
 
-## Required next steps
+### Routes, headers, performance, and identity
 
-1. Validate rate cells and reject malformed values; never strip a negative
-   sign into a positive charge. Add unit, browser, and claim coverage if rate
-   support is publicly documented.
-2. Register/enable `worklog-appendix` as the $19 one-time Sociobot product and
-   verify a real checkout, return token, restore, refund/revocation, and free
-   export after lock.
-3. Add exact claims and tagged sandbox tests for the daily verification limit
-   and refund/revocation behavior, or remove those promises.
-4. Correct the Privacy deletion guidance.
+- Live `/`, `/demo`, `/workspace`, `/privacy`, and `/terms`: HTTP 200. Unknown route: styled HTTP 404.
+- Live responses carry the configured CSP, `nosniff`, and strict-origin referrer policy. HTML uses 30-second revalidation.
+- Live Lighthouse 13.0.1 mobile `/demo`: Performance 100, Accessibility 100, Best Practices 100, SEO 100; FCP 0.9 s, LCP 1.0 s, TBT 60 ms, CLS 0.
+- Payload: JS 27,141 B raw / 10.00 KB gzip; CSS 14,746 B raw / 4.11 KB gzip; hero WebP 61,526 B; no font payload.
+- Fresh local/live SHA-256 matches were confirmed for all route HTML, `main-ClyIiNia.js`, `main-BXST0Lg4.css`, and `sw.js`.
+- Key live/local hashes: `index.html` `f869690d…cd3`; JS `a94849e8…7f4`; CSS `0f89dbb0…240`; service worker `2c0d93fe…a11`.
 
-No product code was changed during this verification.
+## Known gaps and next steps
+
+- No real live card was charged and no real customer license was refunded during repair. The live purchase entry and hosted product were verified, while return, restore, refund, and revocation state transitions use deterministic intercepted billing responses. This avoids creating a financial transaction during QA.
+- No package-consumer or backend concurrency check applies to this static product. There is no sign-in, backend data store, published package, or CLI.
+- No further release-blocking product gap is known.
