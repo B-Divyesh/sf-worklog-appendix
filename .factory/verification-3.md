@@ -1,8 +1,11 @@
 # Independent verification 3 — FAIL
 
-**Candidate:** `3073c5c3e4d07397e2edfb6ef1b1734084ee025d` (`main`)  
-**Live URL:** https://worklog-appendix.sociobot.in  
-**Verified:** 2026-08-29 UTC  
+**Candidate:** `3073c5c3e4d07397e2edfb6ef1b1734084ee025d` (`main`)
+
+**Live URL:** https://worklog-appendix.sociobot.in
+
+**Verified:** 2026-08-29 UTC
+
 **Scope:** independent product QA; no product code was modified
 
 ## Decision
