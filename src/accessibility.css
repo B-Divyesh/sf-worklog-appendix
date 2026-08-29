@@ -1,5 +1,11 @@
 :root { --sun: #834400; --focus: #005a63; }
 
+/* Preserve text contrast throughout the entrance motion. */
+@keyframes appear {
+  from { transform: translateY(10px); }
+  to { transform: none; }
+}
+
 /* The translucent preview sits over the dark report field, so its labels need
    a darker lagoon treatment than labels on the paper surface. */
 .mini-report .doc-label,

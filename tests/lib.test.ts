@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { readFileSync } from 'node:fs';
 import { csvRows, parseWorklogCsv, sampleRows, groups, invoiceLines, reportMarkup, safeText, escapeHtml } from '../src/lib';
 
 describe('worklog conversion', () => {
@@ -46,5 +47,29 @@ describe('worklog conversion', () => {
   it('ships sample data without a network request', () => {
     expect(sampleRows.length).toBeGreaterThanOrEqual(8);
     expect(csvRows('A,B\n1,2')).toEqual([['A','B'],['1','2']]);
+  });
+});
+
+describe('public claims contract', () => {
+  it('lists every claim tag exactly once and keeps the repaired promises aligned', () => {
+    const claims = JSON.parse(readFileSync('.factory/claims.json', 'utf8')) as Array<{id:string; claim:string; test:string}>;
+    const browserTests = readFileSync('tests/browser.pw.ts', 'utf8');
+    const source = readFileSync('src/main.ts', 'utf8');
+    const ids = claims.map(item => item.id);
+    const tags = [...browserTests.matchAll(/@claim:([a-z0-9-]+)/g)].map(match => match[1]);
+
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(tags.sort()).toEqual([...ids].sort());
+    for (const item of claims) {
+      expect(item.test).toBe(`npm test -- --grep @claim:${item.id}`);
+      expect(tags.filter(tag => tag === item.id)).toHaveLength(1);
+    }
+
+    expect(claims).toContainEqual(expect.objectContaining({
+      id: 'included-rows',
+      claim: 'Only included rows appear in the report.'
+    }));
+    expect(source).toContain('Only included rows appear in the report.');
+    expect(source).not.toContain('does not run timers, invoice clients, or monitor anyone');
   });
 });

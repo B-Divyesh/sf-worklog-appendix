@@ -20,9 +20,9 @@
 | Rename a milestone when the client needs plainer wording. | 10 | pass |
 | Save the clean report as a PDF. | 8 | pass |
 | Copy the matching invoice lines. | 5 | pass |
-| It is not a time tracker | 7 | pass |
-| Worklog Appendix does not run timers, invoice clients, or monitor anyone. | 11 | pass |
-| It only turns the worklog you choose into a client-facing companion. | 11 | pass |
+| Your CSV stays local | 4 | pass |
+| You choose the CSV. | 4 | pass |
+| Worklog Appendix reads it and prepares the appendix in this browser. | 11 | pass |
 
 No banned terms appear in the landing copy.
 

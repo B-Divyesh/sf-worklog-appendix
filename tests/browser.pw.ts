@@ -137,6 +137,32 @@ test('@claim:internal-notes never includes internal notes in the client preview 
   await expect(report.locator('body')).not.toContainText('priya@northstar.example');
 });
 
+test('@claim:included-rows excludes unchecked rows from the preview, invoice lines, and printed report', async ({ page }) => {
+  await page.goto('/demo');
+  const excludedDescription = 'Reviewed onboarding notes and agreed the sprint plan.';
+  const includedDescription = 'Mapped the customer handoff and open questions.';
+  const excludedRow = page.getByRole('article').filter({ hasText: excludedDescription });
+
+  await expect(page.locator('.report-panel')).toContainText(excludedDescription);
+  await expect(page.locator('#invoice-lines')).toHaveValue(/Discovery & plan — 3\.5 hours/);
+  await excludedRow.locator('[data-include]').uncheck();
+
+  await expect(page.locator('.report-panel')).not.toContainText(excludedDescription);
+  await expect(page.locator('.report-panel')).toContainText(includedDescription);
+  await expect(page.locator('#invoice-lines')).toHaveValue(/Discovery & plan — 2 hours/);
+  await expect(page.locator('#invoice-lines')).not.toHaveValue(/Discovery & plan — 3\.5 hours/);
+
+  const expectedDescriptions = await page.locator('[data-include]:checked').evaluateAll(controls => controls.map(control =>
+    control.closest('article')?.querySelector('.row-copy p')?.textContent?.trim() || ''
+  ));
+  const popup = page.waitForEvent('popup');
+  await page.getByRole('button', { name: 'Print appendix / save PDF' }).click();
+  const report = await popup;
+  await expect(report.locator('body')).not.toContainText(excludedDescription);
+  await expect(report.locator('body')).toContainText(includedDescription);
+  await expect.poll(() => report.locator('tbody td:nth-child(2)').allTextContents()).toEqual(expectedDescriptions);
+});
+
 test('invalid or negative CSV hours are rejected with a recovery instruction', async ({ page }) => {
   await page.goto('/workspace');
   for (const hours of ['abc', '-2']) {
@@ -273,8 +299,8 @@ test('keyboard users can reach and use the skip link without console errors', as
   expect(errors).toEqual([]);
 });
 
-test('keyboard users can Tab to the visible CSV picker and open it with Enter or Space', async ({ page }) => {
-  for (const key of ['Enter', ' ']) {
+for (const key of ['Enter', 'Space']) {
+  test(`keyboard users can Tab to the visible CSV picker and open it with ${key}`, async ({ page }) => {
     await page.goto('/workspace');
     const picker = page.locator('#csv-file');
     for (let index = 0; index < 16 && !await picker.evaluate(element => element === document.activeElement); index++) await page.keyboard.press('Tab');
@@ -283,8 +309,8 @@ test('keyboard users can Tab to the visible CSV picker and open it with Enter or
     const chooser = page.waitForEvent('filechooser');
     await page.keyboard.press(key);
     await chooser;
-  }
-});
+  });
+}
 
 test('390px controls meet the 44px touch and high-contrast focus baselines', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
@@ -354,6 +380,45 @@ test('dark treatment keeps the landing page free of serious axe violations', asy
   await page.goto('/');
   const results = await new AxeBuilder({page}).analyze();
   expect(results.violations.filter(item => ['serious','critical'].includes(item.impact || ''))).toEqual([]);
+});
+
+test('all public routes pass semantic and serious accessibility checks in both themes', async ({ page }) => {
+  for (const colorScheme of ['light', 'dark'] as const) {
+    await page.emulateMedia({ colorScheme });
+    for (const route of ['/', '/demo', '/workspace', '/privacy', '/terms']) {
+      const errors: string[] = [];
+      const onConsole = (message: { type(): string; text(): string }) => {
+        if (message.type() === 'error') errors.push(message.text());
+      };
+      page.on('console', onConsole);
+      await page.goto(route);
+      await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+      await expect(page.locator('main')).toHaveCount(1);
+      await expect(page.locator('main h1')).toHaveCount(1);
+      const results = await new AxeBuilder({ page }).analyze();
+      expect(results.violations.filter(item => ['serious', 'critical'].includes(item.impact || '')), `${colorScheme} ${route}`).toEqual([]);
+      expect(errors, `${colorScheme} ${route} console errors`).toEqual([]);
+      page.off('console', onConsole);
+    }
+  }
+});
+
+test('the service worker updates cleanly and leaves one current app cache', async ({ page }) => {
+  await page.goto('/demo');
+  const state = await page.evaluate(async () => {
+    const registration = await navigator.serviceWorker.ready;
+    await registration.update();
+    const keys = await caches.keys();
+    return {
+      active: registration.active?.state,
+      waiting: registration.waiting?.state || null,
+      caches: keys.filter(key => key.startsWith('worklog-appendix-'))
+    };
+  });
+  expect(state.active).toBe('activated');
+  expect(state.waiting).toBeNull();
+  expect(state.caches).toHaveLength(1);
+  expect(state.caches[0]).toMatch(/^worklog-appendix-[a-f0-9]{12}$/);
 });
 
 test('reduced motion uses instant scrolling and control transitions', async ({ page }) => {

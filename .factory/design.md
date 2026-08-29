@@ -23,7 +23,7 @@ The UI uses the self-hosted system font stack (no network font request): Georgia
 
 ### Interaction and motion
 
-Sheets rise into view with a 180 ms opacity/translate transition. Milestone rows illuminate when selected; this explains the grouping relationship. Under reduced motion, all states appear instantly. Focus uses a 3 px deep-lagoon outline, chosen to clear 3:1 contrast on both paper and glass surfaces.
+Sheets rise into view with a short translate transition that preserves text contrast at every frame. Milestone rows illuminate when selected; this explains the grouping relationship. Under reduced motion, all states appear instantly. Focus uses a 3 px deep-lagoon outline, chosen to clear 3:1 contrast on both paper and glass surfaces.
 
 ### Art plan and provenance
 
