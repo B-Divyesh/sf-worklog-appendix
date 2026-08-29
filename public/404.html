@@ -4,6 +4,18 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>Page not found — Worklog Appendix</title>
+    <meta name="theme-color" content="#10233B" />
+    <meta name="description" content="This address does not have a Worklog Appendix page." />
+    <link rel="canonical" href="https://worklog-appendix.sociobot.in/404.html" />
+    <meta property="og:title" content="Page not found — Worklog Appendix" />
+    <meta property="og:description" content="This address does not have a Worklog Appendix page." />
+    <meta property="og:image" content="https://worklog-appendix.sociobot.in/assets/social.webp" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Page not found — Worklog Appendix" />
+    <meta name="twitter:description" content="This address does not have a Worklog Appendix page." />
+    <meta name="twitter:image" content="https://worklog-appendix.sociobot.in/assets/social.webp" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.svg" />
     <style>
       * {
         box-sizing: border-box;
@@ -75,7 +87,13 @@
         padding: 1.5rem 0;
         font-size: 0.85rem;
         color: #c4d9dd;
+        display: flex;
+        justify-content: space-between;
+        gap: 1rem 2rem;
+        flex-wrap: wrap;
       }
+      footer p { margin: 0; }
+      .generated { font-size: .75rem; }
       @media (max-width: 390px) {
         body { padding: 0 1rem; }
         main { padding: 4rem 0; }
@@ -87,8 +105,8 @@
     <header>
       <a href="/">Worklog Appendix</a>
       <nav aria-label="Main navigation">
-        <a href="/demo">Demo</a><a href="/privacy">Privacy</a
-        ><a href="/terms">Terms</a>
+        <a href="/demo">Demo</a><a href="/#how">How it works</a
+        ><a href="/privacy">Privacy</a>
       </nav>
     </header>
     <main id="main" tabindex="-1">
@@ -98,9 +116,9 @@
       <a href="/">Go to Worklog Appendix</a>
     </main>
     <footer>
-      Clear work evidence for client invoices. ·
-      <a href="/privacy">Privacy</a> · <a href="/terms">Terms</a> · Built by
-      Param Factory · v1.0.1
+      <p>Clear work evidence for client invoices.</p>
+      <p><a href="/privacy">Privacy</a> · <a href="/terms">Terms</a> · Built by Param Factory · __APP_VERSION__</p>
+      <p class="generated">Illustration generated for this product.</p>
     </footer>
   </body>
 </html>

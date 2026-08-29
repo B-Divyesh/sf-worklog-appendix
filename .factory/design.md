@@ -36,3 +36,5 @@ Hero art is an original generated editorial still: translucent document layers, 
 Document corners are 18 px; panes have a one-pixel blue-grey rim and restrained shadow. Primary controls are warm amber rounded capsules. The 404 treatment uses a lone lit waypoint on the same map field.
 
 The paid client-preset area uses the same document-desk hierarchy. It is a ruled section rather than a promotional card, so the free report remains primary and the optional license does not interrupt the workflow.
+
+The optional wording panel follows the same ruled-document treatment. Its disclosure exposes the exact outbound text, and the streamed draft appears in a plain editable sheet rather than a chat interface. This keeps the product focused on invoice evidence instead of adopting a generic AI assistant style.

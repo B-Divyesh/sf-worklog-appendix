@@ -99,7 +99,9 @@ footer a {
   .preset-panel select,
   .license-form input,
   .milestone-label select,
-  .report-panel textarea { background: #173552; color: var(--ink); }
+  .report-panel textarea,
+  .wording-panel input,
+  .wording-panel textarea { background: #173552; color: var(--ink); }
   .file-picker input { color: var(--ink); }
   .file-picker input::file-selector-button { background: #31546b; color: var(--ink); }
   .copy { background: #31546b; color: var(--ink); }
@@ -125,6 +127,7 @@ footer a {
    stack before its labels can be clipped, and controls may shrink to the
    available column instead of imposing a minimum page width. */
 body { min-width: 0; }
+body { overflow-wrap: anywhere; }
 header { height: auto; min-height: 76px; padding: .65rem 0; gap: .65rem; }
 nav { flex-wrap: wrap; align-items: center; }
 .brand { display: inline-flex; align-items: center; min-height: 44px; }

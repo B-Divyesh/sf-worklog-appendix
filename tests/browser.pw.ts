@@ -9,6 +9,15 @@ test('@claim:csv-import imports a quoted CSV row and its hours into the demo wor
   await expect(page.getByRole('article').getByText('Prepared, reviewed, and shipped', {exact:true})).toBeVisible();
   await expect(page.locator('.work-row > b')).toHaveText('1.25 h');
 });
+test('the first-screen action opens the isolated query-string demo in one click', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', {name:'Try it with sample data'}).click();
+  await expect(page).toHaveURL(/\?demo=1$/);
+  await expect(page.getByText('Demo — sample data, nothing is saved')).toBeVisible();
+  await expect(page.getByRole('button', {name:'Reset demo'})).toBeVisible();
+  await expect(page.getByRole('button', {name:'Start for real'})).toBeVisible();
+  await expect(page.getByText('Northstar Studio').first()).toBeVisible();
+});
 test('@claim:invoice-lines creates matching client invoice lines', async ({ page }) => {
   await page.goto('/demo');
   await expect(page.locator('#invoice-lines')).toHaveValue([
@@ -151,6 +160,89 @@ test('@claim:free-core-export lets a demo user print an appendix without an acco
   await page.getByRole('button', { name: 'Print appendix / save PDF' }).click();
   const report = await popup;
   await expect(report.getByText('Total approved work: 19 hours')).toBeVisible();
+});
+
+test('@claim:free-core-features keeps import, redaction, invoice lines, printing, and accessibility available without a license', async ({ page }) => {
+  await page.goto('/demo');
+  expect(await page.evaluate(() => localStorage.getItem('sb_license:worklog-appendix'))).toBeNull();
+  await page.locator('#csv-file').setInputFiles({
+    name:'free-core.csv', mimeType:'text/csv',
+    buffer:Buffer.from('Date,Description,Hours,Milestone\n2026-08-29,"Sent notes to sam@example.com at +1 (555) 444-1212",1,Review')
+  });
+  await expect(page.locator('#invoice-lines')).toHaveValue('Review — 1 hour');
+  await page.getByRole('button', {name:'Copy invoice lines'}).click();
+  await expect(page.locator('#status')).toContainText(/Invoice lines copied|Copy was blocked/);
+  const popup = page.waitForEvent('popup');
+  await page.getByRole('button', {name:'Print appendix / save PDF'}).click();
+  const report = await popup;
+  await expect(report.locator('body')).toContainText('[email removed]');
+  await expect(report.locator('body')).toContainText('[phone removed]');
+  await expect(report.locator('body')).not.toContainText('sam@example.com');
+  const pageAxe = await new AxeBuilder({page}).analyze();
+  const reportAxe = await new AxeBuilder({page:report}).analyze();
+  expect(pageAxe.violations.filter(item => ['serious','critical'].includes(item.impact || ''))).toEqual([]);
+  expect(reportAxe.violations.filter(item => ['serious','critical'].includes(item.impact || ''))).toEqual([]);
+  expect(await page.evaluate(() => localStorage.getItem('sb_license:worklog-appendix'))).toBeNull();
+});
+
+test('@claim:client-wording-draft uses an isolated canned demo and a streamed, editable, undoable Sociobot fixture', async ({ page }, testInfo) => {
+  const productOrigin = new URL(String(testInfo.project.use.baseURL)).origin;
+  const external: string[] = [];
+  const responseBodies: unknown[] = [];
+  page.on('request', request => {
+    if (new URL(request.url()).origin !== productOrigin) external.push(request.url());
+  });
+  await page.route('https://api.sociobot.in/v1/models', route => route.fulfill({
+    status:200,contentType:'application/json',body:JSON.stringify({data:[{id:'gpt-5.6-sol'}]})
+  }));
+  await page.route('https://api.sociobot.in/v1/responses', route => {
+    responseBodies.push(route.request().postDataJSON());
+    return route.fulfill({status:200,contentType:'text/event-stream',body:[
+      'data: {"type":"response.output_text.delta","delta":"Prepared the client review notes."}\n\n',
+      'data: {"type":"response.output_text.delta","delta":"\\nCompleted the approved revisions."}\n\n',
+      'data: [DONE]\n\n'
+    ].join('')});
+  });
+
+  await page.goto('/?demo=1');
+  await expect(page).toHaveURL(/\?demo=1$/);
+  await expect(page.getByText('Demo — sample data, nothing is saved')).toBeVisible();
+  await page.getByText('Review exactly what will be sent').click();
+  await expect(page.locator('#wording-source li').first()).toHaveText('Reviewed onboarding notes and agreed the sprint plan.');
+  await page.getByRole('button', {name:'Draft client wording'}).click();
+  await expect(page.getByLabel('Editable draft')).toHaveAttribute('aria-busy','true');
+  await expect(page.getByLabel('Editable draft')).not.toHaveValue('');
+  await expect(page.getByLabel('Editable draft')).toHaveValue(/Reviewed onboarding notes and confirmed the sprint plan\./);
+  expect(external).toEqual([]);
+  expect(await page.evaluate(() => localStorage.getItem('sociobot_key:worklog-appendix'))).toBeNull();
+  await page.getByRole('button', {name:'Reset demo'}).click();
+  await expect(page.getByLabel('Editable draft')).toHaveCount(0);
+
+  await page.getByRole('button', {name:'Start for real'}).click();
+  await page.locator('#csv-file').setInputFiles({name:'wording.csv',mimeType:'text/csv',buffer:Buffer.from(
+    'Description,Hours,Milestone\nRaw technical review note,1,Review\nMade revisions,2,Delivery'
+  )});
+  await page.getByText('Review exactly what will be sent').click();
+  await expect(page.locator('#wording-source')).toContainText('Raw technical review note');
+  await page.getByLabel('Sociobot key').fill('sbk_fixture');
+  await page.getByRole('button', {name:'Draft client wording'}).click();
+  await expect(page.getByLabel('Editable draft')).toHaveValue('Prepared the client review notes.\nCompleted the approved revisions.');
+  await page.getByLabel('Editable draft').fill('Prepared concise client review notes.\nCompleted the approved revisions.');
+  await page.getByRole('button', {name:'Use this wording'}).click();
+  await expect(page.locator('.report-panel')).toContainText('Prepared concise client review notes.');
+  await page.getByRole('button', {name:'Undo wording'}).click();
+  await expect(page.locator('.report-panel')).toContainText('Raw technical review note');
+  page.once('dialog', dialog => dialog.accept('Manual client sentence.'));
+  await page.getByRole('button', {name:/Edit wording for Raw technical review note/}).click();
+  await expect(page.locator('.report-panel')).toContainText('Manual client sentence.');
+  await expect.poll(() => page.evaluate(() => localStorage.getItem('sociobot_key:worklog-appendix'))).toBe('sbk_fixture');
+  expect(external).toEqual(['https://api.sociobot.in/v1/models','https://api.sociobot.in/v1/responses']);
+  expect(responseBodies).toHaveLength(1);
+  expect(JSON.stringify(responseBodies[0])).toContain('Raw technical review note');
+  expect(JSON.stringify(responseBodies[0])).toContain('Made revisions');
+  expect(JSON.stringify(responseBodies[0])).not.toContain('Internal Notes');
+  await page.getByRole('button', {name:'Remove key'}).click();
+  await expect.poll(() => page.evaluate(() => localStorage.getItem('sociobot_key:worklog-appendix'))).toBeNull();
 });
 
 test('@claim:internal-notes never includes internal notes in the client preview or printed appendix', async ({ page }) => {
@@ -318,7 +410,7 @@ test('@claim:client-presets gates saved presets behind a verified one-time licen
   await expect(page).toHaveURL(/\/workspace$/);
   await expect(page.getByRole('heading', {name:'Reuse client details'})).toBeVisible();
   await expect(page.getByRole('button', {name:'Save current details'})).toHaveCount(0);
-  await expect(page.getByRole('link', {name:'Buy client presets — $19'})).toHaveAttribute('href', 'https://api.sociobot.in/api/v1/products/worklog-appendix/checkout');
+  await expect(page.getByRole('link', {name:'Save reusable client details — $19'})).toHaveAttribute('href', 'https://api.sociobot.in/api/v1/products/worklog-appendix/checkout');
   await page.goto('/demo?license=return-license-token');
   await expect(page).toHaveURL(/\/workspace$/);
   await expect(page.getByText('License active. Client presets are available.')).toBeVisible();
@@ -347,7 +439,7 @@ test('@claim:client-presets gates saved presets behind a verified one-time licen
   await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('worklog-appendix:presets') || '[]')))
     .toHaveLength(1);
   await page.goto('/privacy');
-  await expect(page.getByText('Removing the stored license in the app deletes only the license check; your report and presets remain.')).toBeVisible();
+  await expect(page.getByText(/Removing a license or Sociobot key in the app deletes only that key/)).toBeVisible();
   await page.goto('/workspace');
   await page.getByLabel('Have a license? Paste it here').fill('pasted-license-token');
   await page.getByRole('button', {name:'Restore license'}).click();
@@ -427,7 +519,7 @@ test('@claim:license-revocation locks refunded and revoked presets while free ex
 test('SPA route changes focus and announce the new page heading', async ({ page }) => {
   await page.goto('/');
   await page.getByLabel('Main navigation').getByRole('link', { name:'Privacy' }).click();
-  await expect(page.getByRole('heading', { name:'Your worklog stays close to you' })).toBeFocused();
+  await expect(page.getByRole('heading', { name:'How Worklog Appendix stores your data' })).toBeFocused();
   await expect(page.locator('#route-announcement')).toHaveText('Privacy — Worklog Appendix loaded');
 });
 
@@ -521,9 +613,19 @@ test('390px controls meet the 44px touch and high-contrast focus baselines', asy
   expect(select?.height).toBeGreaterThanOrEqual(44);
 });
 
-test('the styled 404 has 44px touch targets at 390px and passes axe', async ({ page }) => {
+test('the styled 404 uses the complete route shell, shared version, metadata, touch targets, and passes axe', async ({ page }) => {
   await page.setViewportSize({width:390,height:844});
   await page.goto('/404.html');
+  const packageVersion = `v${JSON.parse(readFileSync('package.json','utf8')).version}`;
+  await expect(page).toHaveTitle('Page not found — Worklog Appendix');
+  await expect(page.locator('meta[name="description"]')).toHaveAttribute('content', /Worklog Appendix/);
+  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', 'https://worklog-appendix.sociobot.in/404.html');
+  await expect(page.locator('meta[property="og:image"]')).toHaveAttribute('content', /social\.webp$/);
+  await expect(page.locator('link[rel="icon"]')).toHaveAttribute('href', '/favicon.svg');
+  await expect(page.locator('link[rel="apple-touch-icon"]')).toHaveAttribute('href', '/apple-touch-icon.svg');
+  expect(await page.getByLabel('Main navigation').getByRole('link').allTextContents()).toEqual(['Demo','How it works','Privacy']);
+  await expect(page.locator('footer')).toContainText('Illustration generated for this product.');
+  await expect(page.locator('footer')).toContainText(packageVersion);
   for (const link of await page.getByRole('link').all()) {
     const box = await link.boundingBox();
     expect(box?.width).toBeGreaterThanOrEqual(44);
@@ -564,11 +666,14 @@ test('direct route documents have route-specific canonical metadata before JavaS
   expect(landing).toContain('/assets/social.webp');
   expect(readFileSync('dist/assets/social.webp').length).toBeGreaterThan(0);
   expect(readFileSync('dist/sitemap.xml', 'utf8')).toContain('https://worklog-appendix.sociobot.in/workspace');
+  const packageVersion = `v${JSON.parse(readFileSync('package.json','utf8')).version}`;
+  expect(readFileSync('dist/404.html','utf8')).toContain(`Param Factory · ${packageVersion}`);
+  expect(readFileSync('dist/404.html','utf8')).not.toContain('__APP_VERSION__');
 });
 
 test('landing has a usable document outline and no serious axe violations', async ({ page }) => {
   await page.goto('/');
-  await expect(page).toHaveTitle('Worklog Appendix — Explain billed work clearly');
+  await expect(page).toHaveTitle('Worklog Appendix — Turn worklogs into invoice appendices');
   await expect(page.locator('html')).toHaveAttribute('lang','en');
   await expect(page.locator('main h1')).toHaveCount(1);
   const results = await new AxeBuilder({page}).analyze();

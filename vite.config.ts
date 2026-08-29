@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import { readFile, readdir, writeFile } from 'node:fs/promises';
+import { readFileSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
 import { defineConfig } from 'vite';
 
@@ -12,7 +13,12 @@ async function filesWithin(directory: string): Promise<string[]> {
   return paths.flat();
 }
 
+const packageVersion = `v${JSON.parse(readFileSync(resolve(process.cwd(), 'package.json'), 'utf8')).version}`;
+
 export default defineConfig({
+  define: {
+    __APP_VERSION__: JSON.stringify(packageVersion),
+  },
   build: {
     rollupOptions: {
       input: {
@@ -44,6 +50,8 @@ export default defineConfig({
       await writeFile(serviceWorker, source
         .replace('__CACHE_VERSION__', hash.digest('hex').slice(0, 12))
         .replace('/* __PRECACHE_ASSETS__ */', precache));
+      const notFound = join(output, '404.html');
+      await writeFile(notFound, (await readFile(notFound, 'utf8')).replaceAll('__APP_VERSION__', packageVersion));
     }
   }]
 });

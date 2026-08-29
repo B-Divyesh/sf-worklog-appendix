@@ -389,6 +389,57 @@ nav a {
 .preset-panel .license-form,
 .preset-panel #license-note,
 .preset-panel > #remove-license { grid-column: 1 / -1; }
+.wording-panel {
+  margin: 1.5rem 0 0;
+  padding: 1.5rem;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--glass);
+  box-shadow: 0 14px 30px #10233b0d;
+}
+.wording-panel h2 {
+  margin: .1rem 0 .35rem;
+  font: 700 1.6rem Georgia, serif;
+}
+.wording-panel p { margin: .35rem 0; max-width: 68ch; }
+.wording-panel details { margin: 1rem 0; }
+.wording-panel summary {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.wording-panel ol { max-height: 13rem; overflow: auto; margin: .3rem 0 1rem; padding-left: 1.6rem; }
+.wording-panel li { margin-bottom: .35rem; }
+.wording-panel > label { display: block; margin-top: .8rem; font-size: .82rem; font-weight: 750; }
+.wording-panel input,
+.wording-panel textarea {
+  width: 100%;
+  min-height: 44px;
+  padding: .65rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+}
+.wording-panel textarea { min-height: 9rem; resize: vertical; line-height: 1.5; }
+.key-row,
+.wording-actions { display: flex; align-items: center; gap: .7rem; flex-wrap: wrap; }
+.key-row input { flex: 1 1 18rem; }
+.wording-actions { margin-top: 1rem; }
+.edit-wording {
+  min-height: 44px;
+  border: 0;
+  background: transparent;
+  color: var(--lagoon);
+  padding: 0;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
 footer {
   border-top: 1px solid var(--line);
   padding: 1.8rem 0 3rem;
@@ -787,6 +838,9 @@ footer {
   .setup .check {
     grid-column: auto;
   }
+  .wording-panel { padding: 1.1rem; }
+  .key-row > *,
+  .wording-actions > * { width: 100%; }
   .mini-report {
     padding: 1.2rem;
   }
