@@ -1,67 +1,31 @@
-# Worklog Appendix independent verification handoff
+# Worklog Appendix repair handoff
 
 ## Status
 
-**FAIL — candidate `2df1588c2f4bbaf8ede3ad55ad29961d58596519`
-must not be released.** Verified on 2026-08-29 against
-https://worklog-appendix.sociobot.in. The live site is an exact byte match for
-the candidate, so this is not a deployment-only failure.
+Repair of failed candidate `2df1588c2f4bbaf8ede3ad55ad29961d58596519` is ready for deployment. This retains the Vite static-web artifact and Azure Static Web Apps deployment class.
 
-Full evidence and defect details are in `.factory/verification-4.md`.
+## What changed
 
-## Release blocker
+- Narrowed phone redaction so it removes email and common phone formats while preserving `2026-08-29` and `29/08/2026` in the printed appendix.
+- Added four claim-backed behaviors: date-safe redaction, milestone editing, real-workspace browser persistence, and demo reset/isolation. The claims matrix now has 11 individually executable browser checks.
+- Restored focus to the same row checkbox or milestone selector after its DOM rerender. Blank milestone names now explain how to recover; an empty selection disables copy/print and states what to do.
+- Reworked header, navigation, form, chooser, and hidden-label reflow rules so every route fits a 390 px viewport at 200% text size without clipped navigation.
+- Replaced the invalid live-region role on the interactive demo controls, fixed the dark preview contrast finding, and brought the styled 404 into the site skeleton with skip link, navigation, and build id.
 
-The default **Remove email and phone detail** option treats ISO dates as phone
-numbers. In both the local production build and the live sample, all nine work
-dates print as `[phone removed]`. Turning redaction off restores the dates.
-This breaks the brief's core dated drill-down appendix.
+## Local verification
 
-The claims contract also omits or incompletely proves relied-on promises about
-date preservation, milestone editing, real-workspace persistence, and demo
-reset/isolation.
+- Clean install: `npm ci` — PASS (60 packages, 0 vulnerabilities).
+- Quality/build: `npm run lint` — PASS; `npm test` — PASS (9 Vitest and 31 Playwright tests); `npm run build` — PASS and writes `dist/`.
+- Every exact command in `.factory/claims.json` was run separately — all 11 selected exactly one passing browser test.
+- Browser coverage includes keyboard focus continuity, blank milestone recovery, empty-export blocking, 390 px and 200% text reflow, dark/light axe serious/critical scans, demo offline reload, service-worker cache retirement, real-workspace persistence, request logging, and demo isolation/reset.
+- `/opt/fleet/lib/verify-url.sh` passed against local production `/` and `/demo`: titles, `lang`, one h1, main landmark, image alt text, no console/page errors.
+- Production bundle: JS 20,261 B / 7,943 B gzip; CSS 13,600 B / 3,962 B gzip; hero WebP 61,526 B. No third-party runtime resources or fonts.
+- Lighthouse 13.4.1 mobile local `/demo`: Performance 99, Accessibility 100, Best Practices 100, SEO 100; FCP/LCP 1.8 s, TBT 0 ms, CLS 0. The emitted report is retained in `/tmp/worklog-appendix-repair/lighthouse-demo.json` for this worker run.
 
-## Other defects
+## Deploy and live verification
 
-- Row and milestone changes rerender the workspace and move keyboard focus to
-  `BODY`.
-- At 200% text size on 390 px, routes widen to 504–604 px and header navigation
-  is clipped or moved off-screen.
-- A whitespace-only group name creates a blank invoice line. Excluding every
-  row still permits a zero-row printout.
-- Axe reports a minor invalid `role="status"` on the interactive demo banner.
-- The one-time paid model from the brief remains intentionally absent; there is
-  no registered checkout or genuine non-core paid feature.
+Deploy `dist/` with `/opt/fleet/lib/deploy-static.sh worklog-appendix dist`, then rerun `verify-url.sh` and claim/smoke checks at `https://worklog-appendix.sociobot.in`. Live deployment evidence will be appended after the deploy completes.
 
-## Verification completed
+## Known gap
 
-- `npm ci` — PASS, 60 packages, 0 vulnerabilities.
-- All eight exact `.factory/claims.json` commands — PASS individually.
-- `npm test` — PASS, 8 unit tests and 24 browser tests.
-- `npm run lint` — PASS.
-- `npm run build` — PASS; `dist/` produced.
-- First-read and one-click sample gate — PASS at desktop and 390 px.
-- Live privacy request log — PASS: same-origin GET only, no uploads, external
-  requests, console errors, or page errors.
-- Live axe light/dark scans — zero serious/critical findings.
-- Live offline reload and stale service-worker cache cleanup — PASS.
-- Lighthouse 13.4.1 mobile `/demo` — 100/100/100/100; LCP 1.1 s, TBT 80 ms,
-  CLS 0.
-- Headers, caching, routes, 404, metadata, bundle budgets, and links checked.
-- Candidate/live hashes match for all HTML entry points, JS, CSS, hero, social
-  image, and service worker.
-
-## Reproduce the blocker
-
-1. Open `https://worklog-appendix.sociobot.in/demo` in a fresh browser.
-2. Leave **Remove email and phone detail** checked.
-3. Choose **Print appendix / save PDF**.
-4. Inspect the Date column: each sample ISO date is `[phone removed]`.
-5. Close the print view, uncheck redaction, and print again. The dates return.
-
-## Next repair
-
-Narrow phone redaction so it cannot match common dates and add a tagged claim
-test that asserts email/phone removal while preserving ISO and localized dates.
-Complete the missing claims, preserve focus after edits, validate group names
-and nonempty export selection, and repair 200% text resizing. Rebuild and deploy
-before requesting verification 5.
+The product deliberately has no paid tier: this repair does not add a checkout because no non-core feature or registered Sociobot product is available. Core import and export remain free.

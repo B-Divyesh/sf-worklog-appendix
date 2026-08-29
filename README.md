@@ -2,7 +2,7 @@
 
 Worklog Appendix turns approved worklog CSV rows into a client-readable invoice appendix and matching invoice lines. It is for freelancers who need to explain billed hours without sending a raw timesheet.
 
-The app runs locally in the browser. It does not upload CSV files, require an account, or use analytics or advertising trackers.
+The app runs locally in the browser. It does not upload CSV files, require an account, or use analytics or advertising trackers. Contact redaction removes email and phone detail without changing report dates.
 
 ## Run it
 
@@ -16,7 +16,7 @@ Open the local URL that Vite prints. Use `/demo` for the isolated sample workspa
 ## Use it
 
 1. Import a CSV with `Description` and `Hours` columns. `Date`, `Milestone`, `Status`, and `Internal Notes` are optional.
-2. Include the approved rows and choose client-friendly milestone names.
+2. Include the approved rows and choose client-friendly milestone names. Empty groups and empty reports are blocked with a clear next step.
 3. Check the report preview, copy the matching invoice lines, then choose **Print appendix / save PDF**.
 
 The print dialog is the PDF export path. Choose “Save as PDF” in the browser dialog before attaching it to an invoice.

@@ -12,6 +12,7 @@ let rows: Worklog[] = [];
 let settings: Settings = { client:'', invoice:'', period:'', redact:true };
 let message = '';
 let shouldFocusHeading = false;
+type EditorFocus = { attribute: 'data-include' | 'data-milestone'; id: string } | { selector: string };
 const ns = () => isDemo ? 'demo:worklog-appendix' : 'worklog-appendix';
 const display = (value: string) => escapeHtml(safeText(value, settings.redact));
 const attr = (value: string) => escapeHtml(value);
@@ -66,7 +67,7 @@ function landing(){
   bindBase();
   document.querySelector('#try-sample')?.addEventListener('click',()=>{isDemo=true;sample();route('/demo');});
 }
-function demoBanner(){return isDemo ? `<aside class="demo-banner" role="status">Demo — sample data, nothing is saved <button id="reset-demo">Reset demo</button><button id="start-real">Start for real</button></aside>` : '';}
+function demoBanner(){return isDemo ? `<aside class="demo-banner" aria-label="Demo workspace"><p><strong>Demo</strong> — sample data, nothing is saved.</p><div><button id="reset-demo">Reset demo</button><button id="start-real">Start for real</button></div></aside>` : '';}
 function filePicker(label: string) { return `<label class="file-picker"><span>${label}</span><input id="csv-file" type="file" accept=".csv,text/csv"></label>`; }
 function appPage(){
   if (isDemo && !rows.length) sample();
@@ -74,7 +75,7 @@ function appPage(){
   const title = isDemo ? 'Demo — Worklog Appendix' : 'Workspace — Worklog Appendix';
   const description = isDemo ? 'Try Worklog Appendix with a private, resettable Northstar Studio sample.' : 'Import a worklog CSV and prepare a client-readable appendix.';
   setMetadata(title,description,isDemo ? '/demo' : '/workspace');
-  app.innerHTML=`${header()}${demoBanner()}<main id="main" tabindex="-1" class="workspace"><section class="work-head"><div><p class="eyebrow">${isDemo?'SAMPLE WORKSPACE':'YOUR WORKSPACE'}</p><h1 tabindex="-1">Build a worklog appendix</h1><p>Only included rows appear in the report.</p></div><div class="head-actions">${rows.length ? filePicker('Import a CSV') : ''}<button class="primary" id="print-report" ${rows.length?'':'disabled'}>Print appendix / save PDF</button></div></section><p id="status" class="status" aria-live="polite">${attr(message)}</p><section class="setup" aria-label="Report details"><label>Client<input id="client" value="${attr(settings.client)}"></label><label>Invoice number<input id="invoice" value="${attr(settings.invoice)}"></label><label>Billing period<input id="period" value="${attr(settings.period)}"></label><label class="check"><input id="redact" type="checkbox" ${settings.redact?'checked':''}> Remove email and phone detail</label></section>${rows.length ? workContent() : emptyState()}</main>${footer()}`;
+  app.innerHTML=`${header()}${demoBanner()}<main id="main" tabindex="-1" class="workspace"><section class="work-head"><div><p class="eyebrow">${isDemo?'SAMPLE WORKSPACE':'YOUR WORKSPACE'}</p><h1 tabindex="-1">Build a worklog appendix</h1><p>Only included rows appear in the report.</p></div><div class="head-actions">${rows.length ? filePicker('Import a CSV') : ''}<button class="primary" id="print-report" ${rows.some(row=>row.included)?'':'disabled'}>Print appendix / save PDF</button></div></section><p id="status" class="status" aria-live="polite">${attr(message)}</p><section class="setup" aria-label="Report details"><label>Client<input id="client" value="${attr(settings.client)}"></label><label>Invoice number<input id="invoice" value="${attr(settings.invoice)}"></label><label>Billing period<input id="period" value="${attr(settings.period)}"></label><label class="check"><input id="redact" type="checkbox" ${settings.redact?'checked':''}> Remove email and phone detail</label></section>${rows.length ? workContent() : emptyState()}</main>${footer()}`;
   bindBase();
   bindWork();
 }
@@ -83,7 +84,8 @@ function workContent(){
   const gs=groups(rows);
   const total=rows.filter(r=>r.included).reduce((n,r)=>n+r.hours,0);
   const milestones = [...new Set(rows.map(row => row.milestone))];
-  return `<section class="report-grid"><div class="rows-panel"><div class="section-heading"><div><p class="eyebrow">SOURCE ROWS</p><h2>Choose approved work</h2></div><span>${rows.filter(r=>r.included).length} included</span></div><div class="row-list">${rows.map(r=>`<article class="work-row"><label class="include"><input type="checkbox" data-include="${attr(r.id)}" ${r.included?'checked':''}><span class="sr-only">Include ${display(r.description)}</span></label><div class="row-copy"><small>${display(r.date)} · ${display(r.project)}</small><p>${display(r.description)}</p>${r.notes ? `<small class="internal">Internal note kept out of the report: ${display(r.notes)}</small>`:''}</div><label class="milestone-label">Milestone<select data-milestone="${attr(r.id)}">${milestones.map(m=>`<option value="${attr(m)}" ${m===r.milestone?'selected':''}>${display(m)}</option>`).join('')}<option value="__new">Add a group…</option></select></label><b>${fmt(r.hours)} h</b></article>`).join('')}</div></div><aside class="report-panel"><p class="eyebrow">CLIENT PREVIEW</p><h2>${display(settings.client || 'Client name')}</h2><p class="muted">${display(settings.invoice || 'Invoice number')} · ${display(settings.period || 'Billing period')}</p>${gs.map(g=>`<section class="group"><h3>${display(g.name)}<span>${fmt(g.hours)} h</span></h3><p>${g.items.slice(0,2).map(r=>display(r.description)).join(' ')}</p><small>${g.items.length} completed row${g.items.length===1?'':'s'}</small></section>`).join('')}<p class="report-total">${fmt(total)} approved hours</p><button class="copy" id="copy-lines">Copy invoice lines</button><textarea id="invoice-lines" readonly aria-label="Matching invoice lines">${attr(invoiceLines(rows).join('\n'))}</textarea></aside></section>`;
+  const hasIncluded = rows.some(row => row.included);
+  return `<section class="report-grid"><div class="rows-panel"><div class="section-heading"><div><p class="eyebrow">SOURCE ROWS</p><h2>Choose approved work</h2></div><span>${rows.filter(r=>r.included).length} included</span></div><div class="row-list">${rows.map(r=>`<article class="work-row"><label class="include"><input type="checkbox" data-include="${attr(r.id)}" ${r.included?'checked':''}><span class="sr-only">Include ${display(r.description)}</span></label><div class="row-copy"><small>${display(r.date)} · ${display(r.project)}</small><p>${display(r.description)}</p>${r.notes ? `<small class="internal">Internal note kept out of the report: ${display(r.notes)}</small>`:''}</div><label class="milestone-label">Milestone<select data-milestone="${attr(r.id)}">${milestones.map(m=>`<option value="${attr(m)}" ${m===r.milestone?'selected':''}>${display(m)}</option>`).join('')}<option value="__new">Add a group…</option></select></label><b>${fmt(r.hours)} h</b></article>`).join('')}</div></div><aside class="report-panel"><p class="eyebrow">CLIENT PREVIEW</p><h2>${display(settings.client || 'Client name')}</h2><p class="muted">${display(settings.invoice || 'Invoice number')} · ${display(settings.period || 'Billing period')}</p>${gs.map(g=>`<section class="group"><h3>${display(g.name)}<span>${fmt(g.hours)} h</span></h3><p>${g.items.slice(0,2).map(r=>display(r.description)).join(' ')}</p><small>${g.items.length} completed row${g.items.length===1?'':'s'}</small></section>`).join('')}${hasIncluded ? `<p class="report-total">${fmt(total)} approved hours</p><button class="copy" id="copy-lines">Copy invoice lines</button><textarea id="invoice-lines" readonly aria-label="Matching invoice lines">${attr(invoiceLines(rows).join('\n'))}</textarea>` : '<p class="empty-selection">Include at least one row before copying or printing the appendix.</p>'}</aside></section>`;
 }
 function bindBase(){
   document.querySelector<HTMLAnchorElement>('.skip')?.addEventListener('click', event => {
@@ -93,9 +95,9 @@ function bindBase(){
   document.querySelectorAll<HTMLElement>('[data-route]').forEach(link=>link.addEventListener('click',event=>{event.preventDefault(); route(link.getAttribute('href')!);}));
 }
 function bindWork(){
-  const update=(patch:Partial<Settings>)=>{settings={...settings,...patch};save();render();};
-  ['client','invoice','period'].forEach(key=>document.querySelector<HTMLInputElement>(`#${key}`)?.addEventListener('change',event=>update({[key]:(event.target as HTMLInputElement).value})));
-  document.querySelector<HTMLInputElement>('#redact')?.addEventListener('change',event=>update({redact:(event.target as HTMLInputElement).checked}));
+  const update=(patch:Partial<Settings>, selector?:string)=>{settings={...settings,...patch};save();render(selector ? {selector} : undefined);};
+  ['client','invoice','period'].forEach(key=>document.querySelector<HTMLInputElement>(`#${key}`)?.addEventListener('change',event=>update({[key]:(event.target as HTMLInputElement).value}, `#${key}`)));
+  document.querySelector<HTMLInputElement>('#redact')?.addEventListener('change',event=>update({redact:(event.target as HTMLInputElement).checked}, '#redact'));
   document.querySelector<HTMLInputElement>('#csv-file')?.addEventListener('change', async event=>{
     const file=(event.target as HTMLInputElement).files?.[0];
     if(!file)return;
@@ -103,15 +105,15 @@ function bindWork(){
     catch(error){message=error instanceof Error?error.message:'The CSV could not be read.';render();}
   });
   document.querySelector('#load-sample')?.addEventListener('click',()=>{sample();save();render();});
-  document.querySelectorAll<HTMLInputElement>('[data-include]').forEach(input=>input.addEventListener('change',()=>{const row=rows.find(item=>item.id===input.dataset.include);if(row)row.included=input.checked;save();render();}));
-  document.querySelectorAll<HTMLSelectElement>('[data-milestone]').forEach(input=>input.addEventListener('change',()=>{const row=rows.find(item=>item.id===input.dataset.milestone);if(!row)return; if(input.value==='__new'){const name=window.prompt('Name this milestone for the client.'); if(!name){render();return;} row.milestone=name;} else row.milestone=input.value; save();render();}));
+  document.querySelectorAll<HTMLInputElement>('[data-include]').forEach(input=>input.addEventListener('change',()=>{const row=rows.find(item=>item.id===input.dataset.include);if(!row)return; row.included=input.checked; if(!rows.some(item=>item.included)) message='Include at least one row before printing the appendix.'; save();render({attribute:'data-include',id:row.id});}));
+  document.querySelectorAll<HTMLSelectElement>('[data-milestone]').forEach(input=>input.addEventListener('change',()=>{const row=rows.find(item=>item.id===input.dataset.milestone);if(!row)return; if(input.value==='__new'){const name=window.prompt('Name this milestone for the client.'); const trimmed=name?.trim(); if(!trimmed){message='A milestone needs a name. Type a client-facing name, then try again.';render({attribute:'data-milestone',id:row.id});return;} row.milestone=trimmed;} else row.milestone=input.value; save();render({attribute:'data-milestone',id:row.id});}));
   document.querySelector('#print-report')?.addEventListener('click',printReport);
-  document.querySelector('#copy-lines')?.addEventListener('click',async()=>{try {await navigator.clipboard.writeText(invoiceLines(rows).join('\n'));message='Invoice lines copied.';}catch{message='Copy was blocked. Select the text below and copy it.';}render();});
-  document.querySelector('#reset-demo')?.addEventListener('click',()=>{sample();message='Demo reset.';render();});
+  document.querySelector('#copy-lines')?.addEventListener('click',async()=>{try {await navigator.clipboard.writeText(invoiceLines(rows).join('\n'));message='Invoice lines copied.';}catch{message='Copy was blocked. Select the text below and copy it.';}render({selector:'#copy-lines'});});
+  document.querySelector('#reset-demo')?.addEventListener('click',()=>{sample();message='Demo reset.';render({selector:'#reset-demo'});});
   document.querySelector('#start-real')?.addEventListener('click',()=>{isDemo=false;rows=[];settings={client:'',invoice:'',period:'',redact:true};message='Your workspace is ready. Import a CSV to begin.';route('/workspace');});
 }
-function printReport(){ const pop=window.open('','worklog-appendix-report'); if(!pop){message='Your browser blocked the print window. Allow pop-ups, then try again.';render();return;} pop.document.write(reportMarkup(rows,settings)); pop.document.close(); pop.focus(); pop.print(); }
-function render(){
+function printReport(){ if(!rows.some(row=>row.included)){message='Include at least one row before printing the appendix.';render({selector:'#print-report'});return;} const pop=window.open('','worklog-appendix-report'); if(!pop){message='Your browser blocked the print window. Allow pop-ups, then try again.';render({selector:'#print-report'});return;} pop.document.write(reportMarkup(rows,settings)); pop.document.close(); pop.focus(); pop.print(); }
+function render(focus?: EditorFocus){
   const path=location.pathname;
   const nextIsDemo = path === '/demo' || new URLSearchParams(location.search).get('demo') === '1';
   if (nextIsDemo !== isDemo) {
@@ -131,6 +133,12 @@ function render(){
     setTimeout(()=>document.querySelector<HTMLElement>('main h1')?.focus(),0);
     shouldFocusHeading = false;
   }
+  if (focus) requestAnimationFrame(() => {
+    const target = 'selector' in focus
+      ? document.querySelector<HTMLElement>(focus.selector)
+      : [...document.querySelectorAll<HTMLElement>(`[${focus.attribute}]`)].find(control => control.getAttribute(focus.attribute) === focus.id);
+    target?.focus();
+  });
 }
 render();
 if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));

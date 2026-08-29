@@ -98,7 +98,7 @@ footer a {
   .preview { background: #10233b; color: #f6f7f2; }
   .mini-report { background: #173552; color: #f6f7f2; border-color: #55758a; }
   .mini-report .doc-label,
-  .mini-report .total { color: #9ee0e6; }
+  .mini-report .total { color: #c8f6f6; }
   .mini-report h3 { border-color: #8ed6dc; }
 }
 
@@ -110,4 +110,36 @@ footer a {
     scroll-behavior: auto !important;
     transition: none !important;
   }
+}
+
+/* Reflow, including browser text zoom: navigation becomes a visible vertical
+   stack before its labels can be clipped, and controls may shrink to the
+   available column instead of imposing a minimum page width. */
+body { min-width: 0; }
+header { height: auto; min-height: 76px; padding: .65rem 0; gap: .65rem; }
+nav { flex-wrap: wrap; align-items: center; }
+.brand { display: inline-flex; align-items: center; min-height: 44px; }
+.primary, .secondary, .copy, .file-picker { max-width: 100%; text-align: center; }
+.empty-selection { color: var(--muted); font-weight: 650; margin: 1.2rem 0; }
+.demo-banner { display: flex; align-items: center; justify-content: center; gap: .4rem 1rem; flex-wrap: wrap; }
+.demo-banner p { margin: 0; }
+.demo-banner button { margin-left: 0; }
+
+@media (max-width: 760px) {
+  header { align-items: flex-start; flex-direction: column; justify-content: center; }
+  nav { width: 100%; justify-content: space-between; gap: .25rem .7rem; }
+  nav a { display: inline-flex; align-items: center; min-height: 44px; }
+  .file-picker { width: 100%; border-radius: 16px; flex-wrap: wrap; }
+  .file-picker input { width: 100%; max-width: 100%; min-width: 0; }
+  .setup label, .setup input, .setup select { min-width: 0; max-width: 100%; }
+}
+
+/* Long hidden labels must not become an invisible horizontal scroll source. */
+.sr-only { max-width: 1px; white-space: normal; }
+
+@media (max-width: 260px) {
+  header, footer, main { width: calc(100% - 20px); }
+  nav { justify-content: flex-start; }
+  .work-row { grid-template-columns: 24px minmax(0, 1fr) 38px; }
+  .mini-report, .report-panel, .empty { padding: 1rem; }
 }

@@ -31,6 +31,10 @@ describe('worklog conversion', () => {
   it('removes an email and phone detail from the client report', () => {
     expect(safeText('Ask sam@example.com or +1 (555) 444-1212',true)).toBe('Ask [email removed] or [phone removed]');
   });
+  it('keeps ISO and localized dates while redacting contact detail', () => {
+    expect(safeText('2026-08-29 and 29/08/2026: sam@example.com, 555-444-1212', true))
+      .toBe('2026-08-29 and 29/08/2026: [email removed], [phone removed]');
+  });
   it('escapes imported text before it reaches the workspace or printable report', () => {
     const hostile = '<img src=x onerror=alert(1)>';
     expect(escapeHtml(hostile)).toBe('&lt;img src=x onerror=alert(1)&gt;');

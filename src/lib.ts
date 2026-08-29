@@ -45,7 +45,18 @@ export function parseWorklogCsv(source: string): Worklog[] {
     return { id:`import-${Date.now()}-${i}`, date:get(record,'date') || 'Undated', project:get(record,'project') || 'Project', milestone:get(record,'milestone') || get(record,'project') || 'Work completed', description, hours, rate:Number(get(record,'rate').replace(/[^0-9.]/g,'')) || undefined, status, notes:get(record,'notes'), included: status === 'approved' };
   });
 }
-export function safeText(value: string, redact: boolean) { return redact ? value.replace(/[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}/g, '[email removed]').replace(/(?:\+?\d[\d .()-]{7,}\d)/g, '[phone removed]') : value; }
+/**
+ * Remove contact details without treating dates as phone numbers. Phone numbers
+ * need a 3–4 digit exchange and a 3–4 digit subscriber portion, optionally
+ * preceded by a country code. That deliberately excludes ISO (2026-08-29)
+ * and common local date (29/08/2026, 29.08.2026) formats.
+ */
+const phoneDetail = /(?:\+?\d{1,3}[-.\s])?(?:\(\d{2,4}\)[-.\s]*|\d{2,4}[-.\s])\d{3,4}[-.\s]\d{3,4}(?!\d)/g;
+export function safeText(value: string, redact: boolean) {
+  return redact
+    ? value.replace(/[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}/g, '[email removed]').replace(phoneDetail, '[phone removed]')
+    : value;
+}
 export function groups(rows: Worklog[]) { const map = new Map<string, Worklog[]>(); rows.filter(r => r.included).forEach(r => map.set(r.milestone || 'Work completed', [...(map.get(r.milestone || 'Work completed') || []), r])); return [...map.entries()].map(([name, items]) => ({ name, items, hours: items.reduce((n,r) => n + r.hours,0), amount: items.reduce((n,r) => n + r.hours * (r.rate || 0),0) })); }
 export function invoiceLines(rows: Worklog[]) { return groups(rows).map(g => `${g.name} — ${fmt(g.hours)} hours${g.amount ? ` — ${money(g.amount)}` : ''}`); }
 export function fmt(n: number) { return n.toLocaleString(undefined,{maximumFractionDigits:2}); }

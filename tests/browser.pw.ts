@@ -24,22 +24,32 @@ test('@claim:pdf-appendix opens a print-ready appendix', async ({ page }) => {
   await expect(report.getByRole('heading',{name:'Completed work for Northstar Studio'})).toBeVisible();
   await expect(report.getByText('Total approved work: 19 hours')).toBeVisible();
 });
-test('@claim:redaction removes personal detail from the report view', async ({ page }) => {
+test('@claim:redaction removes personal detail while preserving ISO and localized dates', async ({ page }) => {
   await page.goto('/demo');
   await page.locator('#csv-file').setInputFiles({
     name: 'contact-details.csv',
     mimeType: 'text/csv',
-    buffer: Buffer.from('Description,Hours\n"Send the update to sam@example.com or +1 (555) 444-1212",2')
+    buffer: Buffer.from('Date,Description,Hours\n2026-08-29,"Send the update to sam@example.com or +1 (555) 444-1212",2\n29/08/2026,"Confirmed the local date format",1')
   });
-  const report = page.locator('.report-panel');
-  await page.getByLabel('Remove email and phone detail').uncheck();
-  await expect(report).toContainText('sam@example.com');
-  await expect(report).toContainText('+1 (555) 444-1212');
-  await page.getByLabel('Remove email and phone detail').check();
-  await expect(report).toContainText('[email removed]');
-  await expect(report).toContainText('[phone removed]');
-  await expect(report).not.toContainText('sam@example.com');
-  await expect(report).not.toContainText('+1 (555) 444-1212');
+  const popup = page.waitForEvent('popup');
+  await page.getByRole('button', { name: 'Print appendix / save PDF' }).click();
+  const report = await popup;
+  await expect(report.locator('body')).toContainText('2026-08-29');
+  await expect(report.locator('body')).toContainText('29/08/2026');
+  await expect(report.locator('body')).toContainText('[email removed]');
+  await expect(report.locator('body')).toContainText('[phone removed]');
+  await expect(report.locator('body')).not.toContainText('sam@example.com');
+  await expect(report.locator('body')).not.toContainText('+1 (555) 444-1212');
+});
+
+test('@claim:milestone-edit renames a milestone and updates its matching invoice line', async ({ page }) => {
+  await page.goto('/demo');
+  page.once('dialog', dialog => dialog.accept('Project planning'));
+  await page.locator('[data-milestone]').nth(0).selectOption('__new');
+  await expect(page.locator('#invoice-lines')).toHaveValue(/Project planning — 1\.5 hours/);
+  await page.locator('[data-milestone]').nth(1).selectOption('Project planning');
+  await expect(page.locator('#invoice-lines')).toHaveValue(/Project planning — 3\.5 hours/);
+  await expect(page.locator('#invoice-lines')).not.toHaveValue(/Discovery & plan/);
 });
 test('@claim:offline-demo works after first visit with no external requests', async ({ page, context }) => {
   const external: string[] = [];
@@ -58,20 +68,55 @@ test('@claim:offline-demo works after first visit with no external requests', as
   expect(external).toEqual([]);
 });
 
-test('@claim:local-only keeps imported CSV data in the browser with no external requests', async ({ page }) => {
+test('@claim:real-workspace-persistence keeps imported real-workspace data after reload with no upload', async ({ page }) => {
   const external: string[] = [];
+  const writes: string[] = [];
   page.on('request', request => {
     if (new URL(request.url()).origin !== 'http://127.0.0.1:4173') external.push(request.url());
+    if (!['GET', 'HEAD'].includes(request.method())) writes.push(`${request.method()} ${request.url()}`);
   });
-  await page.goto('/demo');
+  await page.goto('/workspace');
   await page.locator('#csv-file').setInputFiles({
     name: 'private-hours.csv',
     mimeType: 'text/csv',
     buffer: Buffer.from('Description,Hours\nPrepared private estimate,2')
   });
   await expect(page.getByText('Imported 1 rows from private-hours.csv.')).toBeVisible();
-  await expect.poll(() => page.evaluate(() => localStorage.getItem('demo:worklog-appendix'))).toBeNull();
+  await expect.poll(() => page.evaluate(() => localStorage.getItem('worklog-appendix'))).toContain('Prepared private estimate');
+  await page.reload();
+  await expect(page.getByRole('article').getByText('Prepared private estimate', { exact:true })).toBeVisible();
   expect(external).toEqual([]);
+  expect(writes).toEqual([]);
+});
+
+test('@claim:demo-reset-isolation resets the sample and never reads or saves real workspace data', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('worklog-appendix', JSON.stringify({
+    rows: [{id:'real-1',date:'2026-08-29',project:'Private',milestone:'Private',description:'Confidential real work',hours:2,status:'approved',notes:'',included:true}],
+    settings: {client:'Private client',invoice:'INV-PRIVATE',period:'August',redact:true}
+  })));
+  await page.goto('/demo');
+  await expect(page.getByText('Confidential real work')).toHaveCount(0);
+  await page.locator('#csv-file').setInputFiles({ name:'demo-change.csv', mimeType:'text/csv', buffer:Buffer.from('Description,Hours\nTemporary demo change,2') });
+  await expect(page.getByRole('article').getByText('Temporary demo change', { exact:true })).toBeVisible();
+  await page.getByRole('button', { name:'Reset demo' }).click();
+  await expect(page.getByText('Northstar Studio').first()).toBeVisible();
+  await expect(page.getByText('Temporary demo change')).toHaveCount(0);
+  await expect.poll(() => page.evaluate(() => localStorage.getItem('worklog-appendix'))).toContain('Confidential real work');
+  await expect.poll(() => page.evaluate(() => localStorage.getItem('demo:worklog-appendix'))).toBeNull();
+});
+
+test('@claim:local-only keeps imported CSV data in the browser with no external requests', async ({ page }) => {
+  const external: string[] = [];
+  const writes: string[] = [];
+  page.on('request', request => {
+    if (new URL(request.url()).origin !== 'http://127.0.0.1:4173') external.push(request.url());
+    if (!['GET', 'HEAD'].includes(request.method())) writes.push(`${request.method()} ${request.url()}`);
+  });
+  await page.goto('/workspace');
+  await page.locator('#csv-file').setInputFiles({ name:'private-hours.csv', mimeType:'text/csv', buffer:Buffer.from('Description,Hours\nPrepared private estimate,2') });
+  await expect.poll(() => page.evaluate(() => localStorage.getItem('worklog-appendix'))).toContain('Prepared private estimate');
+  expect(external).toEqual([]);
+  expect(writes).toEqual([]);
 });
 
 test('@claim:free-core-export lets a demo user print an appendix without an account or payment', async ({ page }) => {
@@ -140,6 +185,35 @@ test('SPA navigation to Demo resets real data into the isolated sample workspace
   await expect(page.getByText('Confidential real work')).toHaveCount(0);
 });
 
+test('row inclusion and milestone changes keep keyboard focus on the edited control', async ({ page }) => {
+  await page.goto('/demo');
+  const include = page.locator('[data-include]').first();
+  await include.focus();
+  await include.uncheck();
+  await expect(page.locator('[data-include]').first()).toBeFocused();
+
+  const milestone = page.locator('[data-milestone]').first();
+  await milestone.focus();
+  page.once('dialog', dialog => dialog.accept('Focused milestone'));
+  await milestone.selectOption('__new');
+  await expect(page.locator('[data-milestone]').first()).toBeFocused();
+  await expect(page.locator('[data-milestone]').first()).toHaveValue('Focused milestone');
+});
+
+test('blank milestone names and zero selected rows show recovery instead of exporting empty output', async ({ page }) => {
+  await page.goto('/workspace');
+  await page.locator('#csv-file').setInputFiles({ name:'one-row.csv', mimeType:'text/csv', buffer:Buffer.from('Description,Hours,Milestone\nOne useful row,1,Original') });
+  page.once('dialog', dialog => dialog.accept('   '));
+  await page.locator('[data-milestone]').selectOption('__new');
+  await expect(page.locator('#status')).toHaveText('A milestone needs a name. Type a client-facing name, then try again.');
+  await expect(page.locator('#invoice-lines')).toHaveValue('Original — 1 hours');
+  await page.locator('[data-include]').uncheck();
+  await expect(page.locator('#status')).toHaveText('Include at least one row before printing the appendix.');
+  await expect(page.getByRole('button', { name:'Print appendix / save PDF' })).toBeDisabled();
+  await expect(page.locator('.empty-selection')).toBeVisible();
+  await expect(page.locator('#invoice-lines')).toHaveCount(0);
+});
+
 test('SPA route changes focus and announce the new page heading', async ({ page }) => {
   await page.goto('/');
   await page.getByLabel('Main navigation').getByRole('link', { name:'Privacy' }).click();
@@ -167,6 +241,25 @@ test('the landing page does not overflow a 390px viewport', async ({ page }) => 
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+});
+
+test('all app routes reflow without clipped navigation at 200% browser zoom', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  for (const route of ['/', '/demo', '/workspace', '/privacy', '/terms']) {
+    await page.goto(route);
+    await page.evaluate(() => { document.documentElement.style.fontSize = '200%'; });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+    const navigation = page.getByLabel('Main navigation');
+    await expect(navigation).toBeVisible();
+    for (const link of await navigation.getByRole('link').all()) await expect(link).toBeVisible();
+  }
+});
+
+test('the interactive demo banner has no invalid live-region role', async ({ page }) => {
+  await page.goto('/demo');
+  await expect(page.locator('.demo-banner')).not.toHaveAttribute('role', 'status');
+  const results = await new AxeBuilder({page}).analyze();
+  expect(results.violations.filter(item => ['serious','critical'].includes(item.impact || ''))).toEqual([]);
 });
 
 test('keyboard users can reach and use the skip link without console errors', async ({ page }) => {
