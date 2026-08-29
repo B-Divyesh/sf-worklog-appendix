@@ -1,79 +1,67 @@
-# Worklog Appendix repair handoff
+# Worklog Appendix independent verification handoff
 
 ## Status
 
-Release-blocking findings from independent verification candidate
-`3073c5c3e4d07397e2edfb6ef1b1734084ee025d` are repaired. The source repair
-commit is `a87da936cb56bb3eeffac41067ec5dcffc4cbe8a`; the final
-documentation/deployment commit follows it.
+**FAIL — candidate `2df1588c2f4bbaf8ede3ad55ad29961d58596519`
+must not be released.** Verified on 2026-08-29 against
+https://worklog-appendix.sociobot.in. The live site is an exact byte match for
+the candidate, so this is not a deployment-only failure.
 
-## What changed
+Full evidence and defect details are in `.factory/verification-4.md`.
 
-- Dark mode now keeps the landing result section and document labels readable,
-  and uses an amber focus ring with at least 3:1 contrast on dark surfaces.
-- Every SPA render derives demo mode from the current URL. Moving from a real
-  workspace to `/demo` resets to the bundled Northstar sample and shows the
-  demo banner; real workspace storage is not shown in demo mode.
-- Claim coverage is complete: quoted import hours, all four invoice lines,
-  printing, redaction, offline demo, local-only storage/network behavior, free
-  export, and internal-note exclusion each have one exact tagged browser test.
-- CSV validation now rejects blank descriptions, accepts `.5` as 0.5 hours,
-  and gives row-specific recovery text. Invalid saved workspace JSON or shapes
-  are removed and recover to an importable blank workspace.
-- SPA navigation now focuses and announces the destination heading. The skip
-  link focuses main content. Reduced-motion mode disables scrolling and control
-  transitions. The two text actions reported on mobile have 44px targets.
-- Added the missing workspace sitemap entry, complete Twitter card metadata,
-  a derived 1200×630 original social image, clear shared-shell 404 copy, and a
-  short revalidating cache policy for un-hashed WebP art.
+## Release blocker
 
-## Verification
+The default **Remove email and phone detail** option treats ISO dates as phone
+numbers. In both the local production build and the live sample, all nine work
+dates print as `[phone removed]`. Turning redaction off restores the dates.
+This breaks the brief's core dated drill-down appendix.
 
-- Clean install: `npm ci` — PASS, 60 packages, 0 vulnerabilities.
-- Unit + browser integration: `npm test` — PASS: 8 Vitest tests and 24
-  Playwright Chromium tests.
-- Exact claim commands — all PASS:
-  `@claim:csv-import`, `@claim:invoice-lines`, `@claim:pdf-appendix`,
-  `@claim:redaction`, `@claim:offline-demo`, `@claim:local-only`,
-  `@claim:free-core-export`, and `@claim:internal-notes`.
-- Type check: `npm run lint` — PASS.
-- Production build: `npm run build` — PASS; `dist/` contains its root
-  `index.html`. Main JS is 19.27 KB (7.65 KB gzip), CSS 12.48 KB (3.75 KB
-  gzip), hero 61.5 KB, and social image 50.8 KB.
-- Browser checks included desktop and 390px mobile, keyboard skip/import,
-  light and dark axe scans, route focus/announcement, reduced motion, hostile
-  CSV text, offline demo reload, and service-worker stale-cache cleanup. All
-  pass in the shipped Playwright suite. Request recording in the local-only
-  claim observed no external origin.
-- Local mobile Lighthouse `/demo` (2026-08-29): Performance 99,
-  Accessibility 100, Best Practices 100, SEO 100; FCP 1.0 s, LCP 1.1 s,
-  CLS 0, TBT 100 ms. Lighthouse wrote its JSON to
-  `/tmp/worklog-appendix-lighthouse.json`; Chrome crashed only while capturing
-  its final screenshot, after writing the complete scores.
+The claims contract also omits or incompletely proves relied-on promises about
+date preservation, milestone editing, real-workspace persistence, and demo
+reset/isolation.
 
-## Deployment
+## Other defects
 
-Deployed with `/opt/fleet/lib/deploy-static.sh worklog-appendix dist` on
-2026-08-29 UTC. Azure Static Web Apps deployment
-`34723dd4-2a1e-480e-9a79-a71b979fd95b` succeeded; the custom domain
-`https://worklog-appendix.sociobot.in` returned HTTPS 200.
+- Row and milestone changes rerender the workspace and move keyboard focus to
+  `BODY`.
+- At 200% text size on 390 px, routes widen to 504–604 px and header navigation
+  is clipped or moved off-screen.
+- A whitespace-only group name creates a blank invoice line. Excluding every
+  row still permits a zero-row printout.
+- Axe reports a minor invalid `role="status"` on the interactive demo banner.
+- The one-time paid model from the brief remains intentionally absent; there is
+  no registered checkout or genuine non-core paid feature.
 
-Live verification: root returns 200 with self-only CSP, HSTS, nosniff, and
-strict-origin referrer policy; an unknown path returns the styled 404 with HTTP
-404; `hero.webp` now has `max-age=300, must-revalidate`. Live SHA-256 values
-exactly match `dist/`: index `36935bd9277814dc4e334aff6973a71ec1178f586e3311ef5d7300fd58585c32`,
-JS `577b91b24d645adaa0671d16e60c1b0fd8b6ddffd029f45cefdb3a6d99b7b8dd`,
-CSS `90f1fc09c9aa852d973961efde50705835f10e1afa90ebd56f8d63387ccd4bdb`,
-hero `31eba852f18fdf89135007826fba6098ad8cb75779af3a86bcd94e21269e4b68`,
-and worker `e964224e50c88bb4a5a3af3230d662c8c83b252573c33c57fefdf68549852d8d`.
+## Verification completed
 
-Live Playwright check at desktop and 390px `/demo`: correct demo title/banner,
-390px scroll width, zero external requests, zero console errors, and zero
-serious/critical axe findings in both light and dark landing treatments.
+- `npm ci` — PASS, 60 packages, 0 vulnerabilities.
+- All eight exact `.factory/claims.json` commands — PASS individually.
+- `npm test` — PASS, 8 unit tests and 24 browser tests.
+- `npm run lint` — PASS.
+- `npm run build` — PASS; `dist/` produced.
+- First-read and one-click sample gate — PASS at desktop and 390 px.
+- Live privacy request log — PASS: same-origin GET only, no uploads, external
+  requests, console errors, or page errors.
+- Live axe light/dark scans — zero serious/critical findings.
+- Live offline reload and stale service-worker cache cleanup — PASS.
+- Lighthouse 13.4.1 mobile `/demo` — 100/100/100/100; LCP 1.1 s, TBT 80 ms,
+  CLS 0.
+- Headers, caching, routes, 404, metadata, bundle budgets, and links checked.
+- Candidate/live hashes match for all HTML entry points, JS, CSS, hero, social
+  image, and service worker.
 
-## Known scope note
+## Reproduce the blocker
 
-The shipped candidate has no paid offer or checkout. The prior broken purchase
-link remains absent; all existing core features continue to be free. A paid
-offer must not be reintroduced until the factory registers a checkout product
-and a genuine non-core unlock is defined.
+1. Open `https://worklog-appendix.sociobot.in/demo` in a fresh browser.
+2. Leave **Remove email and phone detail** checked.
+3. Choose **Print appendix / save PDF**.
+4. Inspect the Date column: each sample ISO date is `[phone removed]`.
+5. Close the print view, uncheck redaction, and print again. The dates return.
+
+## Next repair
+
+Narrow phone redaction so it cannot match common dates and add a tagged claim
+test that asserts email/phone removal while preserving ISO and localized dates.
+Complete the missing claims, preserve focus after edits, validate group names
+and nonempty export selection, and repair 200% text resizing. Rebuild and deploy
+before requesting verification 5.
