@@ -53,8 +53,23 @@ documentation/deployment commit follows it.
 
 ## Deployment
 
-The production deployment and live response/artifact checks are recorded after
-the final commit and deploy command complete.
+Deployed with `/opt/fleet/lib/deploy-static.sh worklog-appendix dist` on
+2026-08-29 UTC. Azure Static Web Apps deployment
+`34723dd4-2a1e-480e-9a79-a71b979fd95b` succeeded; the custom domain
+`https://worklog-appendix.sociobot.in` returned HTTPS 200.
+
+Live verification: root returns 200 with self-only CSP, HSTS, nosniff, and
+strict-origin referrer policy; an unknown path returns the styled 404 with HTTP
+404; `hero.webp` now has `max-age=300, must-revalidate`. Live SHA-256 values
+exactly match `dist/`: index `36935bd9277814dc4e334aff6973a71ec1178f586e3311ef5d7300fd58585c32`,
+JS `577b91b24d645adaa0671d16e60c1b0fd8b6ddffd029f45cefdb3a6d99b7b8dd`,
+CSS `90f1fc09c9aa852d973961efde50705835f10e1afa90ebd56f8d63387ccd4bdb`,
+hero `31eba852f18fdf89135007826fba6098ad8cb75779af3a86bcd94e21269e4b68`,
+and worker `e964224e50c88bb4a5a3af3230d662c8c83b252573c33c57fefdf68549852d8d`.
+
+Live Playwright check at desktop and 390px `/demo`: correct demo title/banner,
+390px scroll width, zero external requests, zero console errors, and zero
+serious/critical axe findings in both light and dark landing treatments.
 
 ## Known scope note
 
