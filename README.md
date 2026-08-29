@@ -26,7 +26,7 @@ A real workspace remains in this browser after reload. Start every fresh test at
 
 ## Draft optional client wording
 
-The demo uses a canned wording response and makes no Sociobot request. In a real workspace, paste your own Sociobot key and review the exact selected descriptions before sending them.
+The demo uses a canned wording response and makes no Sociobot request. In a real workspace, paste your own Sociobot key and review the exact selected descriptions before sending them. [Get a key at sociobot.in — pay as you go](https://sociobot.in).
 
 The app sends only those descriptions to `api.sociobot.in` when you choose **Draft client wording**. It streams an editable draft, supports undo, and leaves the manual editing path available. The key stays in browser storage until you remove it.
 
@@ -34,7 +34,7 @@ The app sends only those descriptions to `api.sociobot.in` when you choose **Dra
 
 The one-time license saves reusable client, invoice, and billing-period details. It never gates CSV import, redaction, invoice lines, PDF printing, or accessibility features.
 
-Buy through the Sociobot checkout link in the app. Returning with a license token stores it in this browser and removes it from the URL. You can also paste a license on the landing page or in the workspace.
+Choose **Buy saved client details — $19 (opens checkout)** in the app. Returning with a license token stores it in this browser and removes it from the URL. You can also paste a license on the landing page or in the workspace.
 
 The print dialog is the PDF export path. Choose “Save as PDF” in the browser dialog before attaching it to an invoice.
 
@@ -49,7 +49,7 @@ npm run build
 
 ## Deploy the static site
 
-This is a Vite static site for Azure Static Web Apps. Deploy the `dist/` directory after `npm run build`. `public/staticwebapp.config.json` supplies route rewrites, cache headers, security headers, and the styled 404 response.
+This is a Vite static site for Azure Static Web Apps. Deploy the `dist/` directory after `npm run build`.
 
 ## Privacy details
 

@@ -132,6 +132,7 @@ header { height: auto; min-height: 76px; padding: .65rem 0; gap: .65rem; }
 nav { flex-wrap: wrap; align-items: center; }
 .brand { display: inline-flex; align-items: center; min-height: 44px; }
 .primary, .secondary, .copy, .file-picker { max-width: 100%; text-align: center; }
+.wording-panel .small a { display: inline-flex; align-items: center; min-height: 44px; }
 .empty-selection { color: var(--muted); font-weight: 650; margin: 1.2rem 0; }
 .demo-banner { display: flex; align-items: center; justify-content: center; gap: .4rem 1rem; flex-wrap: wrap; }
 .demo-banner p { margin: 0; }

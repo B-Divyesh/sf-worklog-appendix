@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 
 test('@claim:csv-import imports a quoted CSV row and its hours into the demo workspace', async ({ page }) => {
   await page.goto('/demo');
@@ -229,6 +229,10 @@ test('@claim:client-wording-draft uses an isolated canned demo and a streamed, e
   await page.locator('#csv-file').setInputFiles({name:'wording.csv',mimeType:'text/csv',buffer:Buffer.from(
     'Description,Hours,Milestone\nRaw technical review note,1,Review\nMade revisions,2,Delivery'
   )});
+  const keyLink = page.getByRole('link', {name:'Get a key at sociobot.in — pay as you go (opens new tab)'});
+  await expect(keyLink).toHaveAttribute('href', 'https://sociobot.in');
+  await expect(keyLink).toHaveAttribute('target', '_blank');
+  await expect(keyLink).toHaveAttribute('rel', /external/);
   await page.getByText('Review exactly what will be sent').click();
   await expect(page.locator('#wording-source')).toContainText('Raw technical review note');
   await page.getByLabel('Sociobot key').fill('sbk_fixture');
@@ -417,7 +421,9 @@ test('@claim:client-presets gates saved presets behind a verified one-time licen
   await expect(page).toHaveURL(/\/workspace$/);
   await expect(page.getByRole('heading', {name:'Reuse client details'})).toBeVisible();
   await expect(page.getByRole('button', {name:'Save current details'})).toHaveCount(0);
-  await expect(page.getByRole('link', {name:'Save reusable client details — $19'})).toHaveAttribute('href', 'https://api.sociobot.in/api/v1/products/worklog-appendix/checkout');
+  const checkout = page.getByRole('link', {name:'Buy saved client details — $19 (opens checkout)'});
+  await expect(checkout).toHaveAttribute('href', 'https://api.sociobot.in/api/v1/products/worklog-appendix/checkout');
+  await expect(checkout).toHaveAttribute('rel', 'external');
   await page.goto('/demo?license=return-license-token');
   await expect(page).toHaveURL(/\/workspace$/);
   await expect(page.getByText('License active. Client presets are available.')).toBeVisible();
@@ -528,6 +534,31 @@ test('SPA route changes focus and announce the new page heading', async ({ page 
   await page.getByLabel('Main navigation').getByRole('link', { name:'Privacy' }).click();
   await expect(page.getByRole('heading', { name:'How Worklog Appendix stores your data' })).toBeFocused();
   await expect(page.locator('#route-announcement')).toHaveText('Privacy — Worklog Appendix loaded');
+});
+
+test('browser Back and Forward restore scroll position and prior focus', async ({ page }) => {
+  await page.setViewportSize({width:390,height:844});
+  await page.goto('/');
+  await page.locator('#how').scrollIntoViewIfNeeded();
+  const landingPosition = await page.evaluate(() => window.scrollY);
+  expect(landingPosition).toBeGreaterThan(500);
+  await page.evaluate(() => {
+    const link = document.querySelector<HTMLAnchorElement>('header a[href="/privacy"]')!;
+    link.focus({preventScroll:true});
+    link.click();
+  });
+  await expect(page).toHaveURL(/\/privacy$/);
+  await expect(page.getByRole('heading', {name:'How Worklog Appendix stores your data'})).toBeFocused();
+
+  await page.goBack();
+  await expect(page).toHaveURL(/\/$/);
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(landingPosition);
+  await expect(page.locator('header a[href="/privacy"]')).toBeFocused();
+
+  await page.goForward();
+  await expect(page).toHaveURL(/\/privacy$/);
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
+  await expect(page.getByRole('heading', {name:'How Worklog Appendix stores your data'})).toBeFocused();
 });
 
 test('imported CSV text is displayed as text, never interpreted as markup', async ({ page }) => {
@@ -652,6 +683,19 @@ test('the production service worker has a release-specific cache and retires old
   expect(worker).toMatch(/assets\/main-[^"]+\.css/);
 });
 
+test('@claim:static-build-output writes every deployable route and required asset to dist', () => {
+  const required = [
+    'index.html', 'demo/index.html', 'workspace/index.html', 'privacy/index.html',
+    'terms/index.html', '404.html', 'robots.txt', 'sitemap.xml',
+    'staticwebapp.config.json', 'sw.js', 'favicon.svg', 'apple-touch-icon.svg',
+    'assets/hero.webp', 'assets/social.webp'
+  ];
+  for (const path of required) expect(existsSync(`dist/${path}`), path).toBe(true);
+  const assets = readdirSync('dist/assets');
+  expect(assets.some(path => /^main-[a-zA-Z0-9_-]+\.js$/.test(path))).toBe(true);
+  expect(assets.some(path => /^main-[a-zA-Z0-9_-]+\.css$/.test(path))).toBe(true);
+});
+
 test('the Static Web Apps configuration serves only known SPA routes and a real 404', () => {
   const config = JSON.parse(readFileSync('public/staticwebapp.config.json', 'utf8'));
   expect(config.navigationFallback).toBeUndefined();
@@ -683,6 +727,9 @@ test('landing has a usable document outline and no serious axe violations', asyn
   await expect(page).toHaveTitle('Worklog Appendix — Turn worklogs into invoice appendices');
   await expect(page.locator('html')).toHaveAttribute('lang','en');
   await expect(page.locator('main h1')).toHaveCount(1);
+  await expect(page.getByRole('heading', {name:'Preview the appendix and matching invoice lines'})).toBeVisible();
+  await expect(page.locator('footer')).toContainText('Turn worklog rows into invoice appendices.');
+  await expect(page.locator('footer')).not.toContainText('Clear work evidence');
   const results = await new AxeBuilder({page}).analyze();
   expect(results.violations.filter(item => ['serious','critical'].includes(item.impact || ''))).toEqual([]);
 });

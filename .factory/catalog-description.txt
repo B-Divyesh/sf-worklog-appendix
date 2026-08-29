@@ -1,1 +1,1 @@
-Turn approved worklogs into a dated invoice appendix and matching invoice lines.
+Turn approved worklogs into dated invoice appendices and matching invoice lines.

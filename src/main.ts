@@ -32,6 +32,9 @@ let wordingRun = 0;
 type LicenseVerdict = { valid: boolean; checkedAt: number; reason?: string };
 type Preset = { id: string; name: string; client: string; invoice: string; period: string };
 type EditorFocus = { attribute: 'data-include' | 'data-milestone'; id: string } | { selector: string };
+type HistoryFocus = { selector: string; index: number };
+type NavigationState = { scrollX: number; scrollY: number; focus: HistoryFocus | null };
+type AppHistoryState = { worklogNavigation?: NavigationState } & Record<string, unknown>;
 const ns = () => isDemo ? 'demo:worklog-appendix' : 'worklog-appendix';
 const display = (value: string) => escapeHtml(safeText(value, settings.redact));
 const attr = (value: string) => escapeHtml(value);
@@ -133,14 +136,72 @@ function setMetadata(title: string, description: string, path: string) {
   document.querySelector('meta[name="twitter:title"]')?.setAttribute('content', title);
   document.querySelector('meta[name="twitter:description"]')?.setAttribute('content', description);
 }
-function route(path: string) { history.pushState({},'',path); shouldFocusHeading = true; render(); window.scrollTo({top:0, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'}); }
-window.addEventListener('popstate',()=>{ shouldFocusHeading = true; render(); });
+function captureHistoryFocus(): HistoryFocus | null {
+  const active = document.activeElement as HTMLElement | null;
+  if (!active || active === document.body || !app.contains(active)) return null;
+  if (active.id) return {selector:`#${CSS.escape(active.id)}`,index:0};
+  if (active.matches('main h1')) return {selector:'main h1',index:0};
+  if (active instanceof HTMLAnchorElement) {
+    const selector = `a[href="${CSS.escape(active.getAttribute('href') || '')}"]`;
+    return {selector,index:[...document.querySelectorAll(selector)].indexOf(active)};
+  }
+  return null;
+}
+function navigationState(): NavigationState {
+  return {scrollX:window.scrollX,scrollY:window.scrollY,focus:captureHistoryFocus()};
+}
+function persistNavigationState() {
+  const current = history.state && typeof history.state === 'object' ? history.state as AppHistoryState : {};
+  history.replaceState({...current,worklogNavigation:navigationState()},'');
+}
+function announceRoute() {
+  const announcement = document.querySelector<HTMLElement>('#route-announcement');
+  if (announcement) announcement.textContent = `${document.title} loaded`;
+}
+function scrollImmediately(left: number, top: number) {
+  const prior = document.documentElement.style.scrollBehavior;
+  document.documentElement.style.scrollBehavior = 'auto';
+  window.scrollTo({left,top,behavior:'auto'});
+  document.documentElement.style.scrollBehavior = prior;
+}
+function restoreNavigationState(state?: NavigationState) {
+  const destination = state || {scrollX:0,scrollY:0,focus:{selector:'main h1',index:0}};
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    scrollImmediately(destination.scrollX,destination.scrollY);
+    if (destination.focus) {
+      const targets = document.querySelectorAll<HTMLElement>(destination.focus.selector);
+      targets[destination.focus.index]?.focus({preventScroll:true});
+    }
+    persistNavigationState();
+  }));
+}
+function route(path: string) {
+  persistNavigationState();
+  history.pushState({worklogNavigation:{scrollX:0,scrollY:0,focus:{selector:'main h1',index:0}}},'',path);
+  shouldFocusHeading = true;
+  render();
+  scrollImmediately(0,0);
+  requestAnimationFrame(persistNavigationState);
+}
+history.scrollRestoration = 'manual';
+window.addEventListener('popstate',event=>{
+  shouldFocusHeading = false;
+  render();
+  announceRoute();
+  restoreNavigationState((event.state as AppHistoryState | null)?.worklogNavigation);
+});
+let navigationFrame = 0;
+window.addEventListener('scroll',()=>{
+  cancelAnimationFrame(navigationFrame);
+  navigationFrame = requestAnimationFrame(persistNavigationState);
+},{passive:true});
+document.addEventListener('focusin',persistNavigationState);
 function header(){return `<div id="route-announcement" class="sr-only" aria-live="polite" aria-atomic="true"></div><a class="skip" href="#main">Skip to main content</a><header><a class="brand" href="/" data-route>Worklog <i>Appendix</i></a><nav aria-label="Main navigation"><a href="/demo" data-route>Demo</a><a href="/#how">How it works</a><a href="/privacy" data-route>Privacy</a></nav></header>`;}
-function footer(){return `<footer><p>Clear work evidence for client invoices.</p><p><a href="/privacy" data-route>Privacy</a> · <a href="/terms" data-route>Terms</a> · Built by Param Factory · ${build}</p><p class="generated">Illustration generated for this product.</p></footer>`;}
+function footer(){return `<footer><p>Turn worklog rows into invoice appendices.</p><p><a href="/privacy" data-route>Privacy</a> · <a href="/terms" data-route>Terms</a> · Built by Param Factory · ${build}</p><p class="generated">Illustration generated for this product.</p></footer>`;}
 function page(title:string, description:string, path:string, heading:string, body:string){ setMetadata(title,description,path); app.innerHTML=`${header()}<main id="main" tabindex="-1"><section class="legal"><p class="eyebrow">WORKLOG APPENDIX</p><h1 tabindex="-1">${heading}</h1>${body}</section></main>${footer()}`; bindBase(); }
 function landing(){
   setMetadata('Worklog Appendix — Turn worklogs into invoice appendices','Group approved worklog rows into a dated invoice appendix and matching invoice lines.','/');
-  app.innerHTML=`${header()}<main id="main" tabindex="-1"><section class="hero"><div class="hero-copy"><p class="eyebrow">TURN WORKLOG ROWS INTO AN INVOICE APPENDIX</p><h1 tabindex="-1">Turn worklogs into invoice appendices</h1><p class="lede">For freelancers who need to show clients what each invoice hour covered.</p><div class="actions"><button class="primary" id="try-sample">Try it with sample data</button><span>Open a ten-row sample appendix.</span></div><ul class="facts"><li>Your CSV stays in this browser.</li><li>No account or CSV upload.</li><li>Core export stays free.</li></ul></div><figure><img src="/assets/hero.webp" width="1200" height="800" fetchpriority="high" decoding="async" alt=""><figcaption>Group approved work under dated invoice milestones.</figcaption></figure></section><section class="preview" aria-labelledby="preview-title"><div><p class="eyebrow">INVOICE APPENDIX PREVIEW</p><h2 id="preview-title">One invoice summary. One dated appendix.</h2><p>Group approved rows by milestone. Keep dates and completed work beneath each group.</p></div><div class="mini-report"><p class="doc-label">INV-2048 · NORTHSTAR STUDIO</p><h3>Client portal <b>8 hours</b></h3><p>7 Aug — Implemented account summary and invoice history screens. <strong>4</strong></p><p>10 Aug — Fixed mobile table layout and keyboard focus order. <strong>2.5</strong></p><p>11 Aug — Prepared release checklist and handoff notes. <strong>1.5</strong></p><hr><p class="total">Matching invoice line: Client portal — 8 hours</p></div></section><section id="how" class="how"><p class="eyebrow">HOW IT WORKS</p><h2>Create the appendix in three steps</h2><ol><li><b>Import a CSV</b><span>Use columns for dates, descriptions, hours, and optional milestones.</span></li><li><b>Check the groups</b><span>Include approved rows. Edit wording yourself or ask Sociobot to draft it.</span></li><li><b>Print the appendix</b><span>Open the report and save it as a PDF. Copy the matching invoice lines.</span></li></ol></section><section class="privacy-note"><h2>Your CSV stays local</h2><p>You choose the CSV. Worklog Appendix reads it and prepares the appendix in this browser.</p><a href="/privacy" data-route>Read how local storage works</a></section><section class="tier" aria-labelledby="license-title"><p class="eyebrow">ONE-TIME LICENSE · $19 USD</p><h2 id="license-title">Reuse client details</h2><p>Core import, redaction, invoice lines, PDF printing, and accessibility features stay free. A $19 one-time license adds saved client details.</p><a class="button primary" href="${checkoutUrl}">Save reusable client details — $19</a>${licenseControls()}</section></main>${footer()}`;
+  app.innerHTML=`${header()}<main id="main" tabindex="-1"><section class="hero"><div class="hero-copy"><p class="eyebrow">TURN WORKLOG ROWS INTO AN INVOICE APPENDIX</p><h1 tabindex="-1">Turn worklogs into invoice appendices</h1><p class="lede">For freelancers who need to show clients what each invoice hour covered.</p><div class="actions"><button class="primary" id="try-sample">Try it with sample data</button><span>Open a ten-row sample appendix.</span></div><ul class="facts"><li>Your CSV stays in this browser.</li><li>No account or CSV upload.</li><li>Core export stays free.</li></ul></div><figure><img src="/assets/hero.webp" width="1200" height="800" fetchpriority="high" decoding="async" alt=""><figcaption>Group approved work under dated invoice milestones.</figcaption></figure></section><section class="preview" aria-labelledby="preview-title"><div><p class="eyebrow">INVOICE APPENDIX PREVIEW</p><h2 id="preview-title">Preview the appendix and matching invoice lines</h2><p>Group approved rows by milestone. Keep dates and completed work beneath each group.</p></div><div class="mini-report"><p class="doc-label">INV-2048 · NORTHSTAR STUDIO</p><h3>Client portal <b>8 hours</b></h3><p>7 Aug — Implemented account summary and invoice history screens. <strong>4</strong></p><p>10 Aug — Fixed mobile table layout and keyboard focus order. <strong>2.5</strong></p><p>11 Aug — Prepared release checklist and handoff notes. <strong>1.5</strong></p><hr><p class="total">Matching invoice line: Client portal — 8 hours</p></div></section><section id="how" class="how"><p class="eyebrow">HOW IT WORKS</p><h2>Create the appendix in three steps</h2><ol><li><b>Import a CSV</b><span>Use columns for dates, descriptions, hours, and optional milestones.</span></li><li><b>Check the groups</b><span>Include approved rows. Edit wording yourself or ask Sociobot to draft it.</span></li><li><b>Print the appendix</b><span>Open the report and save it as a PDF. Copy the matching invoice lines.</span></li></ol></section><section class="privacy-note"><h2>Your CSV stays local</h2><p>You choose the CSV. Worklog Appendix reads it and prepares the appendix in this browser.</p><a href="/privacy" data-route>Read how local storage works</a></section><section class="tier" aria-labelledby="license-title"><p class="eyebrow">ONE-TIME LICENSE · $19 USD</p><h2 id="license-title">Reuse client details</h2><p>Core import, redaction, invoice lines, PDF printing, and accessibility features stay free. A $19 one-time license adds saved client details.</p><a class="button primary" href="${checkoutUrl}" rel="external">Buy saved client details — $19 (opens checkout)</a>${licenseControls()}</section></main>${footer()}`;
   bindBase();
   bindLicense();
   document.querySelector('#try-sample')?.addEventListener('click',()=>{isDemo=true;sample();route('/?demo=1');});
@@ -152,7 +213,7 @@ function licenseControls() {
 }
 function presetPanel() {
   if (isDemo) return '';
-  if (!isLicensed()) return `<section class="preset-panel" aria-labelledby="preset-title"><div><p class="eyebrow">SAVED CLIENT DETAILS · PAID</p><h2 id="preset-title">Reuse client details</h2><p>Save client, invoice, and billing-period details with a verified $19 one-time license.</p></div><a class="button secondary" href="${checkoutUrl}">Save reusable client details — $19</a>${licenseControls()}</section>`;
+  if (!isLicensed()) return `<section class="preset-panel" aria-labelledby="preset-title"><div><p class="eyebrow">SAVED CLIENT DETAILS · PAID</p><h2 id="preset-title">Reuse client details</h2><p>Save client, invoice, and billing-period details with a verified $19 one-time license.</p></div><a class="button secondary" href="${checkoutUrl}" rel="external">Buy saved client details — $19 (opens checkout)</a>${licenseControls()}</section>`;
   const presets = readPresets();
   return `<section class="preset-panel" aria-labelledby="preset-title"><div><p class="eyebrow">CLIENT PRESETS · LICENSE ACTIVE</p><h2 id="preset-title">Reuse client details</h2><p>Presets stay in this browser and never include worklog rows.</p></div><div class="preset-actions"><label>Preset name<input id="preset-name" autocomplete="off" value="${attr(presetDraft)}"></label><button class="secondary" id="save-preset">Save current details</button>${presets.length ? `<label>Saved preset<select id="saved-preset">${presets.map(preset=>`<option value="${attr(preset.id)}">${display(preset.name)}</option>`).join('')}</select></label><button class="secondary" id="apply-preset">Apply preset</button><button class="link-button" id="delete-preset">Delete preset</button>` : '<p class="small">No presets saved yet.</p>'}</div>${licenseControls()}</section>`;
 }
@@ -160,7 +221,7 @@ function filePicker(label: string) { return `<label class="file-picker"><span>${
 function wordingPanel() {
   const selected = rows.filter(row => row.included);
   const hasKey = !isDemo && Boolean(localStorage.getItem(sociobotKey));
-  return `<section class="wording-panel" aria-labelledby="wording-title"><div class="wording-intro"><p class="eyebrow">OPTIONAL WORDING HELP</p><h2 id="wording-title">Draft client wording</h2><p>Edit any row yourself. You can also ask Sociobot to rewrite the selected descriptions.</p></div><details><summary>Review exactly what will be sent</summary><ol id="wording-source">${selected.map(row=>`<li>${attr(row.description)}</li>`).join('')}</ol></details>${isDemo ? '<p class="small">The demo uses a canned draft. It never calls Sociobot.</p>' : `<label for="sociobot-token">Sociobot key</label><div class="key-row"><input id="sociobot-token" type="password" autocomplete="off" value="${hasKey ? attr(localStorage.getItem(sociobotKey) || '') : ''}" aria-describedby="key-note"><button class="link-button" id="remove-sociobot-key" type="button" ${hasKey ? '' : 'disabled'}>Remove key</button></div><p class="small" id="key-note">Stored only in this browser. Selected descriptions go to api.sociobot.in when you choose Draft client wording. Usage is billed at your Sociobot key’s rate.</p>`}<div class="wording-actions"><button class="secondary" id="draft-wording" type="button" ${!selected.length || drafting ? 'disabled' : ''}>${drafting ? 'Drafting…' : 'Draft client wording'}</button>${wordingBefore.length ? '<button class="link-button" id="undo-wording" type="button">Undo wording</button>' : ''}</div><p id="wording-status" class="small" aria-live="polite">${attr(wordingMessage)}</p>${wordingDraft || drafting ? `<label for="wording-draft">Editable draft</label><textarea id="wording-draft" rows="${Math.max(5, selected.length)}" ${drafting ? 'aria-busy="true"' : ''}>${attr(wordingDraft)}</textarea>${drafting ? '' : '<button class="primary" id="apply-wording" type="button">Use this wording</button>'}` : ''}</section>`;
+  return `<section class="wording-panel" aria-labelledby="wording-title"><div class="wording-intro"><p class="eyebrow">OPTIONAL WORDING HELP</p><h2 id="wording-title">Draft client wording</h2><p>Edit any row yourself. You can also ask Sociobot to rewrite the selected descriptions.</p></div><details><summary>Review exactly what will be sent</summary><ol id="wording-source">${selected.map(row=>`<li>${attr(row.description)}</li>`).join('')}</ol></details>${isDemo ? '<p class="small">The demo uses a canned draft. It never calls Sociobot.</p>' : `<label for="sociobot-token">Sociobot key</label><div class="key-row"><input id="sociobot-token" type="password" autocomplete="off" value="${hasKey ? attr(localStorage.getItem(sociobotKey) || '') : ''}" aria-describedby="key-note"><button class="link-button" id="remove-sociobot-key" type="button" ${hasKey ? '' : 'disabled'}>Remove key</button></div><p class="small" id="key-note"><a href="https://sociobot.in" target="_blank" rel="external noopener">Get a key at sociobot.in — pay as you go (opens new tab)</a>. Stored only in this browser. Selected descriptions go to api.sociobot.in when you choose Draft client wording. Usage is billed at your key’s current rate.</p>`}<div class="wording-actions"><button class="secondary" id="draft-wording" type="button" ${!selected.length || drafting ? 'disabled' : ''}>${drafting ? 'Drafting…' : 'Draft client wording'}</button>${wordingBefore.length ? '<button class="link-button" id="undo-wording" type="button">Undo wording</button>' : ''}</div><p id="wording-status" class="small" aria-live="polite">${attr(wordingMessage)}</p>${wordingDraft || drafting ? `<label for="wording-draft">Editable draft</label><textarea id="wording-draft" rows="${Math.max(5, selected.length)}" ${drafting ? 'aria-busy="true"' : ''}>${attr(wordingDraft)}</textarea>${drafting ? '' : '<button class="primary" id="apply-wording" type="button">Use this wording</button>'}` : ''}</section>`;
 }
 function appPage(){
   if (isDemo && !rows.length) sample();
@@ -391,9 +452,8 @@ function render(focus?: EditorFocus){
   else if(path==='/demo' || path==='/workspace' || queryDemo) appPage();
   else landing();
   if (shouldFocusHeading) {
-    const announcement = document.querySelector<HTMLElement>('#route-announcement');
-    if (announcement) announcement.textContent = `${document.title} loaded`;
-    setTimeout(()=>document.querySelector<HTMLElement>('main h1')?.focus(),0);
+    announceRoute();
+    setTimeout(()=>document.querySelector<HTMLElement>('main h1')?.focus({preventScroll:true}),0);
     shouldFocusHeading = false;
   }
   if (focus) {
@@ -405,5 +465,6 @@ function render(focus?: EditorFocus){
 }
 acceptLicenseFromUrl();
 render();
+persistNavigationState();
 void verifyStoredLicense();
 if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
