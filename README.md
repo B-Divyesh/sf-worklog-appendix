@@ -48,7 +48,7 @@ This is a Vite static site for Azure Static Web Apps. Deploy the `dist/` directo
 
 Report data is kept in browser storage only when you work outside the demo. The demo stays in memory and never saves work as real data.
 
-License verification sends only the license token to `api.sociobot.in`, at most once per day. It never sends worklog rows, client details, or presets. See `/privacy` and `/terms` for details.
+License verification sends only the license token to `api.sociobot.in`, at most once every 24 hours. It never sends worklog rows, client details, or presets. A refunded or revoked license loses preset access while core export stays free. See `/privacy` and `/terms` for details.
 
 CSV import, client redaction, invoice lines, and PDF printing remain available without a license.
 

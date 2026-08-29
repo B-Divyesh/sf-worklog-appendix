@@ -41,8 +41,14 @@ export function parseWorklogCsv(source: string): Worklog[] {
     }
     const description = get(record,'description').trim();
     if (!description) throw new Error(`Row ${i + 2} needs a Description. Add a description, then import the file again.`);
+    const rawRate = get(record,'rate').trim();
+    const normalizedRate = rawRate.replace(/^\$/, '');
+    const rate = rawRate ? Number(normalizedRate) : undefined;
+    if (rawRate && (!/^\$?(?:(?:0|[1-9]\d*)(?:\.\d+)?|\.\d+)$/.test(rawRate) || !Number.isFinite(rate) || rate! < 0)) {
+      throw new Error(`Row ${i + 2} has an invalid Rate value. Leave it blank or use a zero or positive number (for example 100), then import the file again.`);
+    }
     const status = get(record,'status').toLowerCase() || 'approved';
-    return { id:`import-${Date.now()}-${i}`, date:get(record,'date') || 'Undated', project:get(record,'project') || 'Project', milestone:get(record,'milestone') || get(record,'project') || 'Work completed', description, hours, rate:Number(get(record,'rate').replace(/[^0-9.]/g,'')) || undefined, status, notes:get(record,'notes'), included: status === 'approved' };
+    return { id:`import-${Date.now()}-${i}`, date:get(record,'date') || 'Undated', project:get(record,'project') || 'Project', milestone:get(record,'milestone') || get(record,'project') || 'Work completed', description, hours, rate, status, notes:get(record,'notes'), included: status === 'approved' };
   });
 }
 /**

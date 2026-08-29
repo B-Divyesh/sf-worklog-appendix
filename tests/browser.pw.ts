@@ -209,6 +209,28 @@ test('invalid or negative CSV hours are rejected with a recovery instruction', a
   await expect(page.locator('.work-row > b')).toHaveText('2 h');
 });
 
+test('negative and malformed CSV rates are rejected without creating a positive charge', async ({ page }) => {
+  await page.goto('/workspace');
+  const invalidRateMessage = 'Row 2 has an invalid Rate value. Leave it blank or use a zero or positive number (for example 100), then import the file again.';
+  for (const [name, rate] of [['negative', '-100'], ['text', 'abc'], ['multiple-decimals', '10.20.30']] as const) {
+    await page.locator('#csv-file').setInputFiles({
+      name: `${name}-rate.csv`,
+      mimeType: 'text/csv',
+      buffer: Buffer.from(`Description,Hours,Rate\nQA task,1,${rate}`)
+    });
+    await expect(page.locator('#status')).toHaveText(invalidRateMessage);
+    await expect(page.locator('.work-row')).toHaveCount(0);
+    await expect(page.locator('#invoice-lines')).toHaveCount(0);
+  }
+  await page.locator('#csv-file').setInputFiles({
+    name: 'valid-rate.csv',
+    mimeType: 'text/csv',
+    buffer: Buffer.from('Description,Hours,Rate\nQA task,1,100')
+  });
+  await expect(page.locator('#status')).toHaveText('Imported 1 row from valid-rate.csv.');
+  await expect(page.locator('#invoice-lines')).toHaveValue('Work completed — 1 hour — $100.00');
+});
+
 test('blank descriptions are rejected, leading-decimal hours are accepted, and a following valid import recovers', async ({ page }) => {
   await page.goto('/workspace');
   await page.locator('#csv-file').setInputFiles({ name:'blank-description.csv', mimeType:'text/csv', buffer:Buffer.from('Description,Hours\n,1') });
@@ -330,19 +352,70 @@ test('@claim:client-presets gates saved presets behind a verified one-time licen
   ]);
 });
 
-test('an invalid or revoked license locks paid presets without blocking free export', async ({page}) => {
-  await page.route('https://api.sociobot.in/api/v1/products/worklog-appendix/verify?license=*', route =>
-    route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({valid:false,reason:'revoked',expires_at:null})}));
-  await page.goto('/demo');
-  await page.getByRole('button', {name:'Start for real'}).click();
-  await page.getByLabel('Have a license? Paste it here').fill('revoked-token');
-  await page.getByRole('button', {name:'Restore license'}).click();
-  await expect(page.getByText('License no longer active. Buy or restore a current license.')).toBeVisible();
-  await expect(page.getByRole('button', {name:'Save current details'})).toHaveCount(0);
-  await page.getByRole('button', {name:'Load sample data instead'}).click();
-  const popup = page.waitForEvent('popup');
-  await page.getByRole('button', {name:'Print appendix / save PDF'}).click();
-  await expect((await popup).getByText('Total approved work: 19 hours')).toBeVisible();
+test('@claim:license-daily-verification checks a stored license only after the 24-hour cache boundary', async ({page}) => {
+  let verificationRequests = 0;
+  await page.route('https://api.sociobot.in/api/v1/products/worklog-appendix/verify?license=daily-token', async route => {
+    verificationRequests++;
+    await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({valid:true,reason:'ok',expires_at:null})});
+  });
+  await page.addInitScript(() => {
+    if (!localStorage.getItem('sb_license:worklog-appendix')) {
+      localStorage.setItem('sb_license:worklog-appendix', 'daily-token');
+      localStorage.setItem('sb_license:worklog-appendix:verdict', JSON.stringify({valid:true,reason:'ok',checkedAt:Date.now()}));
+    }
+  });
+  await page.goto('/workspace');
+  await expect(page.getByRole('button', {name:'Save current details'})).toBeVisible();
+  await page.waitForTimeout(100);
+  expect(verificationRequests).toBe(0);
+
+  await page.evaluate(() => localStorage.setItem('sb_license:worklog-appendix:verdict', JSON.stringify({
+    valid:true, reason:'ok', checkedAt:Date.now() - 86_399_000
+  })));
+  await page.reload();
+  await page.waitForTimeout(100);
+  expect(verificationRequests).toBe(0);
+
+  await page.evaluate(() => localStorage.setItem('sb_license:worklog-appendix:verdict', JSON.stringify({
+    valid:true, reason:'ok', checkedAt:Date.now() - 86_400_001
+  })));
+  await page.reload();
+  await expect.poll(() => verificationRequests).toBe(1);
+  await expect(page.getByText('License active. Client presets are available.')).toBeVisible();
+  await expect.poll(() => page.evaluate(() => {
+    const verdict = JSON.parse(localStorage.getItem('sb_license:worklog-appendix:verdict') || '{}') as {checkedAt?:number};
+    return typeof verdict.checkedAt === 'number' && Date.now() - verdict.checkedAt < 1_000;
+  })).toBe(true);
+  await page.reload();
+  await page.waitForTimeout(100);
+  expect(verificationRequests).toBe(1);
+});
+
+test('@claim:license-revocation locks refunded and revoked presets while free export remains available', async ({page}) => {
+  await page.route('https://api.sociobot.in/api/v1/products/worklog-appendix/verify?license=*', route => {
+    const token = new URL(route.request().url()).searchParams.get('license') || '';
+    const reason = token.startsWith('refunded') ? 'refunded' : 'revoked';
+    return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({valid:false,reason,expires_at:null})});
+  });
+  for (const reason of ['refunded', 'revoked']) {
+    await page.goto('/workspace');
+    await page.evaluate(({reason}) => {
+      localStorage.clear();
+      localStorage.setItem('sb_license:worklog-appendix', `${reason}-token`);
+      localStorage.setItem('sb_license:worklog-appendix:verdict', JSON.stringify({
+        valid:true, reason:'ok', checkedAt:Date.now() - 86_400_001
+      }));
+    }, {reason});
+    await page.reload();
+    await expect(page.getByText('License no longer active. Buy or restore a current license.')).toBeVisible();
+    await expect(page.getByRole('button', {name:'Save current details'})).toHaveCount(0);
+    await page.getByRole('button', {name:'Load sample data instead'}).click();
+    const popupPromise = page.waitForEvent('popup');
+    await page.getByRole('button', {name:'Print appendix / save PDF'}).click();
+    const report = await popupPromise;
+    await expect(report.getByText('Total approved work: 19 hours')).toBeVisible();
+    await report.close();
+  }
 });
 
 test('SPA route changes focus and announce the new page heading', async ({ page }) => {

@@ -5,7 +5,7 @@ import { type Worklog, type Settings, sampleRows, parseWorklogCsv, groups, invoi
 declare global { interface HTMLScriptElement { href?: string } interface HTMLLinkElement { src?: string } interface HTMLImageElement { href?: string } }
 
 const app = document.querySelector<HTMLDivElement>('#app')!;
-const build = 'v1.0.1';
+const build = 'v1.0.2';
 const origin = 'https://worklog-appendix.sociobot.in';
 const productSlug = 'worklog-appendix';
 const billingApi = 'https://api.sociobot.in/api/v1';
@@ -82,7 +82,7 @@ function validStoredWorkspace(value: unknown): value is { rows: Worklog[]; setti
     const item = row as Record<string, unknown>;
     return ['id', 'date', 'project', 'milestone', 'description', 'status', 'notes'].every(key => typeof item[key] === 'string')
       && typeof item.hours === 'number' && Number.isFinite(item.hours) && item.hours >= 0
-      && typeof item.included === 'boolean' && (item.rate === undefined || (typeof item.rate === 'number' && Number.isFinite(item.rate)));
+      && typeof item.included === 'boolean' && (item.rate === undefined || (typeof item.rate === 'number' && Number.isFinite(item.rate) && item.rate >= 0));
   };
   const candidateSettings = candidate.settings as Record<string, unknown> | undefined;
   return Array.isArray(candidate.rows) && candidate.rows.every(validRow)
@@ -237,8 +237,8 @@ function render(focus?: EditorFocus){
     message = '';
     if (isDemo) sample();
   }
-  if(path==='/privacy') page('Privacy — Worklog Appendix','How Worklog Appendix keeps CSV data local to your browser.','/privacy','Your worklog stays close to you',`<p>Worklog Appendix reads CSV files locally. It never sends worklog rows, client details, or presets to a server.</p><h2>Local storage</h2><p>A real workspace stores its current report in this browser. Paid client presets and a restored license also stay here. Clear site data, or remove the license in the app, to delete them. The demo stays in memory and does not read or save real workspace data.</p><h2>License checks</h2><p>Buying opens Sociobot checkout. Restoring a license sends only its token to api.sociobot.in for verification, at most once each day. No CSV content or client detail is sent.</p><h2>No tracking</h2><p>No account is required for the app. There is no analytics or advertising tracker.</p>`);
-  else if(path==='/terms') page('Terms — Worklog Appendix','Terms for using Worklog Appendix to prepare client-facing reports.','/terms','Use this report with care',`<p>Worklog Appendix helps you prepare a client-facing appendix. You are responsible for checking its wording, hours, and exported PDF before sending it.</p><h2>One-time license</h2><p>The $19 USD license adds saved client presets. Core export and redaction remain free. Sociobot and Dodo are the merchant of record. A refund or revocation ends access to paid features.</p><h2>No warranty</h2><p>The app is provided as-is to the extent allowed by law.</p>`);
+  if(path==='/privacy') page('Privacy — Worklog Appendix','How Worklog Appendix keeps CSV data local to your browser.','/privacy','Your worklog stays close to you',`<p>Worklog Appendix reads CSV files locally. It never sends worklog rows, client details, or presets to a server.</p><h2>Local storage</h2><p>A real workspace stores its current report in this browser. Paid client presets and a restored license also stay here. Clear this site's browser data to delete all three. Removing the stored license in the app deletes only the license check; your report and presets remain. The demo stays in memory and does not read or save real workspace data.</p><h2>License checks</h2><p>Buying opens Sociobot checkout. Restoring a license sends only its token to api.sociobot.in for verification, at most once every 24 hours. No CSV content or client detail is sent.</p><h2>No tracking</h2><p>No account is required for the app. There is no analytics or advertising tracker.</p>`);
+  else if(path==='/terms') page('Terms — Worklog Appendix','Terms for using Worklog Appendix to prepare client-facing reports.','/terms','Use this report with care',`<p>Worklog Appendix helps you prepare a client-facing appendix. You are responsible for checking its wording, hours, and exported PDF before sending it.</p><h2>One-time license</h2><p>The $19 USD license adds saved client presets. Core export and redaction remain free. Sociobot and Dodo are the merchant of record. A refund revokes the license automatically. A refunded or revoked license loses access to client presets.</p><h2>No warranty</h2><p>The app is provided as-is to the extent allowed by law.</p>`);
   else if(path==='/demo' || path==='/workspace') appPage();
   else landing();
   if (shouldFocusHeading) {

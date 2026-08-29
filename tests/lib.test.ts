@@ -18,6 +18,14 @@ describe('worklog conversion', () => {
     expect(parseWorklogCsv('Description,Hours\nHalf hour,.5')[0].hours).toBe(.5);
     expect(() => parseWorklogCsv('Description,Hours\n,1')).toThrow('Row 2 needs a Description. Add a description, then import the file again.');
   });
+  it('rejects negative and malformed rates instead of turning them into charges', () => {
+    const error = 'Row 2 has an invalid Rate value. Leave it blank or use a zero or positive number (for example 100), then import the file again.';
+    for (const value of ['-100', '$-100', 'abc', '10.20.30']) {
+      expect(() => parseWorklogCsv(`Description,Hours,Rate\nQA task,1,${value}`)).toThrow(error);
+    }
+    expect(parseWorklogCsv('Description,Hours,Rate\nQA task,1,$100')[0].rate).toBe(100);
+    expect(invoiceLines(parseWorklogCsv('Description,Hours,Rate\nQA task,1,100'))).toEqual(['Work completed — 1 hour — $100.00']);
+  });
   it('produces one matching line for every milestone', () => {
     const lines=invoiceLines(sampleRows);
     expect(lines).toContain('Client portal — 8 hours');
@@ -78,6 +86,14 @@ describe('public claims contract', () => {
       claim: 'Only included rows appear in the report.'
     }));
     expect(source).toContain('Only included rows appear in the report.');
+    expect(claims).toContainEqual(expect.objectContaining({
+      id: 'license-daily-verification',
+      claim: 'A stored license is verified with Sociobot at most once every 24 hours.'
+    }));
+    expect(claims).toContainEqual(expect.objectContaining({
+      id: 'license-revocation',
+      claim: 'A refunded or revoked license loses paid preset access, while core export stays free.'
+    }));
     expect(source).not.toContain('does not run timers, invoice clients, or monitor anyone');
   });
 });
