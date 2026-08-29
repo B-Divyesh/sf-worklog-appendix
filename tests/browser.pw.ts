@@ -343,6 +343,12 @@ test('@claim:client-presets gates saved presets behind a verified one-time licen
   await page.reload();
   await expect(page.getByRole('button', {name:'Save current details'})).toBeVisible();
   await page.getByRole('button', {name:'Remove stored license'}).click();
+  await expect(page.getByText('Stored license removed. Your presets remain on this device.')).toBeVisible();
+  await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('worklog-appendix:presets') || '[]')))
+    .toHaveLength(1);
+  await page.goto('/privacy');
+  await expect(page.getByText('Removing the stored license in the app deletes only the license check; your report and presets remain.')).toBeVisible();
+  await page.goto('/workspace');
   await page.getByLabel('Have a license? Paste it here').fill('pasted-license-token');
   await page.getByRole('button', {name:'Restore license'}).click();
   await expect(page.getByText('License active. Client presets are available.')).toBeVisible();
