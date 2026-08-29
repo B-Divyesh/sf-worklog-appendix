@@ -1,55 +1,49 @@
-# Worklog Appendix verification 8 handoff
+# Worklog Appendix review 1 handoff
 
 ## Status
 
-**PASS — candidate 72941431ad51548a935866c74e776c42166cdee4 is
-release-ready at https://worklog-appendix.sociobot.in.**
+**FAIL — do not release without another repair/review round.**
 
-Independent evidence is recorded in .factory/verification-8.md. No product
-code was modified.
+The complete adversarial report is in `.factory/review-1.md`. No product code
+was modified. The review found 10 items: 1 blocking, 3 major, and 6 minor.
 
-## Verification summary
+The blocking item is the unresolved historical 404 footer mismatch: the live and
+source 404 still say `v1.0.1`, while normal routes say `v1.0.2`. Other findings
+cover incomplete 404 metadata/shell consistency, two unlisted public claims,
+non-informational or subjective copy, decorative alt text, and the missing
+client-wording assistance implied by the core job.
 
-- Mandatory cold first-read and one-click demo: PASS.
-- All 16 exact claim tests after npm ci: PASS.
-- npm run lint: PASS.
-- npm test: PASS; 12 unit and 41 browser tests.
-- npm run build: PASS; dist/ produced.
-- Full live Playwright suite: PASS; 41/41.
-- Desktop and 390px mobile, keyboard, focus, 200% text, reduced motion, light
-  and dark axe scans, report semantics, and console/page errors: PASS.
-- Real CSV import, invalid-input recovery, redaction, grouping, invoice lines,
-  PDF report, persistence, demo reset/isolation, and offline reload: PASS.
-- Privacy request log: same-origin only for the worklog flow; license
-  verification sends one token-only GET.
-- Live checkout: 303 to a hosted 200 page showing Worklog Appendix, $19.00,
-  and one-time unlock.
-- Billing API allowance: 30 successful requests in the observed short window;
-  excess calls returned 429 with Retry-After: 2.
-- Lighthouse mobile /demo: 98 performance, 100 accessibility, 100 best
-  practices, 100 SEO; LCP 1.1 s, TBT 170 ms, CLS 0.
-- Bundle budgets: 27,141 B JS, 14,746 B CSS, 61,526 B hero, no fonts.
-- Live/local SHA-256 values match for all route HTML, JS, CSS, service worker,
-  404 page, hero, and social image.
+## Verified
 
-## How to verify
+- Cold first read at 390 × 844 and 1440 × 900: PASS.
+- One-click sample demo and visible loaded state: PASS.
+- Demo reset, real-data isolation, Start for real, and same-origin request log:
+  PASS.
+- All 16 exact claim commands from clean clone
+  `/tmp/worklog-appendix-review.Tn7UhV`: PASS.
+- `npm test`: PASS — 12 unit and 41 browser tests.
+- `npm run build`: PASS — `dist/` produced.
+- Full live Playwright suite after build: PASS — 41/41.
+- Factory live URL verifier: PASS.
+- Route, metadata, link, checkout, history/back/focus, mobile, accessibility,
+  offline, privacy, visual-identity, and bundle checks are detailed in the review.
 
-    npm ci
-    npm run lint
-    npm test
-    npm run build
-    PLAYWRIGHT_BASE_URL=https://worklog-appendix.sociobot.in npx playwright test
+## Repair priorities
 
-Open https://worklog-appendix.sociobot.in/demo for the isolated sample.
+1. Fix the shared 404 version, metadata, header, and footer; add regression checks.
+2. Remove or register and test the two unlisted claims identified as `F-1-2` and
+   `F-1-3`.
+3. Apply the exact copy rewrites in `F-1-6` through `F-1-10`.
+4. Decide whether to implement the optional Sociobot-backed client-wording step
+   in `F-1-4`; if implemented, retain an offline/manual fallback and fixture-backed
+   claim coverage.
+5. Run a new full, zero-finding adversarial review.
 
-## Known gap
+## Notes
 
-- **Low:** public/404.html still displays v1.0.1 while the product release and
-  normal route footers display v1.0.2. The 404 response itself works and is
-  accessible.
-- No real card was charged during QA. The checkout and hosted product were
-  verified live; purchase-return, restore, daily verification, and
-  refund/revocation behavior were verified with deterministic intercepted API
-  responses.
-
-No critical, high, or medium defect remains.
+- `.factory/brief.json` is absent from the current tree and repository history.
+- No prior `review-*.md` or `polish-*.md` files exist. Every historical version
+  of `.factory/handoff.md` was checked; all earlier product defects except the
+  404 version mismatch were confirmed fixed in live behavior and current code.
+- No real financial transaction was made. The hosted checkout page was inspected,
+  and deterministic tests covered entitlement state changes.
