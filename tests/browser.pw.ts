@@ -18,6 +18,13 @@ test('the first-screen action opens the isolated query-string demo in one click'
   await expect(page.getByRole('button', {name:'Start for real'})).toBeVisible();
   await expect(page.getByText('Northstar Studio').first()).toBeVisible();
 });
+test('@claim:demo-sample-shape opens the advertised ten-row sample with four approved milestones and one pending row', async ({ page }) => {
+  await page.goto('/demo');
+  await expect(page.getByText('Demo — sample data, nothing is saved')).toBeVisible();
+  await expect(page.locator('.work-row')).toHaveCount(10);
+  await expect(page.locator('.report-panel .group')).toHaveCount(4);
+  await expect(page.locator('[data-include]:not(:checked)')).toHaveCount(1);
+});
 test('@claim:invoice-lines creates matching client invoice lines', async ({ page }) => {
   await page.goto('/demo');
   await expect(page.locator('#invoice-lines')).toHaveValue([

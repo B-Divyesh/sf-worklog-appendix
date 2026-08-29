@@ -1,4 +1,5 @@
 [
+  {"id":"demo-sample-shape","claim":"The demo opens a ten-row sample with four approved milestones and one pending row.","where":"landing demo action, demo documentation","test":"npm test -- --grep @claim:demo-sample-shape","sandbox":"fresh /demo entry point; assert ten source rows, four approved preview milestones, and one unchecked pending row"},
   {"id":"csv-import","claim":"Imports a worklog CSV with descriptions and hours.","where":"workspace import action, README","test":"npm test -- --grep @claim:csv-import","sandbox":"fresh /demo with shipped sample data and a quoted 1.25-hour CSV row"},
   {"id":"invoice-lines","claim":"Creates matching invoice lines for each milestone.","where":"workspace preview, README","test":"npm test -- --grep @claim:invoice-lines","sandbox":"fresh /demo sample; assert all four milestone lines"},
   {"id":"pdf-appendix","claim":"Prints a dated appendix grouped by milestone for saving as PDF.","where":"workspace primary action, README","test":"npm test -- --grep @claim:pdf-appendix","sandbox":"fresh /demo; inspect the generated report content, dates, milestone groups, language, main landmark, and axe results"},
