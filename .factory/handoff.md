@@ -28,6 +28,7 @@ Repair of failed candidate `2df1588c2f4bbaf8ede3ad55ad29961d58596519` is deploye
 - `/opt/fleet/lib/verify-url.sh` passed on live `/` and `/demo`: route-specific titles, `lang=en`, one h1, main, image alt text, and zero console/page errors. Evidence is in `/tmp/worklog-appendix-repair/live-root` and `/tmp/worklog-appendix-repair/live-demo` for this worker run.
 - Live smoke exercised the normal demo output: all sample ISO dates remain visible with redaction enabled, row-checkbox focus remains on the edited control, 200% text reflow stays within 390 px, and no console errors occurred.
 - Live `index.html` SHA-256 is `0b530b812861624f95c7212a79e900c65f2a6b7a59f07cec1eb777231f2e8c7d`, exactly matching `dist/index.html`. Live headers include HSTS, `nosniff`, strict-origin referrer policy, and the self-only CSP with `frame-ancestors`.
+- Live `/`, `/demo`, `/workspace`, `/privacy`, and `/terms` each return 200. An unknown route returns the upgraded styled 404 with HTTP 404, skip link, navigation, and build id.
 
 ## Known gap
 
