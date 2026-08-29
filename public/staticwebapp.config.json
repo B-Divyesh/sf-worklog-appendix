@@ -1,6 +1,6 @@
 {
   "responseOverrides": {"404":{"rewrite":"/404.html","statusCode":404}},
-  "globalHeaders": {"X-Content-Type-Options":"nosniff","Referrer-Policy":"strict-origin-when-cross-origin","Content-Security-Policy":"default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'"},
+  "globalHeaders": {"X-Content-Type-Options":"nosniff","Referrer-Policy":"strict-origin-when-cross-origin","Content-Security-Policy":"default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self' https://api.sociobot.in; base-uri 'self'; form-action 'self'; frame-ancestors 'self'"},
   "routes": [
     {"route":"/demo","rewrite":"/demo/index.html"},
     {"route":"/privacy","rewrite":"/privacy/index.html"},

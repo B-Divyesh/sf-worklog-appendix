@@ -5,7 +5,7 @@ import { readFileSync } from 'node:fs';
 test('@claim:csv-import imports a quoted CSV row and its hours into the demo workspace', async ({ page }) => {
   await page.goto('/demo');
   await page.locator('#csv-file').setInputFiles({name:'hours.csv',mimeType:'text/csv',buffer:Buffer.from('Date,Description,Hours,Milestone,Status\n2026-08-01,"Prepared, reviewed, and shipped",1.25,Release,approved')});
-  await expect(page.getByText('Imported 1 rows from hours.csv.')).toBeVisible();
+  await expect(page.getByText('Imported 1 row from hours.csv.')).toBeVisible();
   await expect(page.getByRole('article').getByText('Prepared, reviewed, and shipped', {exact:true})).toBeVisible();
   await expect(page.locator('.work-row > b')).toHaveText('1.25 h');
 });
@@ -23,6 +23,10 @@ test('@claim:pdf-appendix opens a print-ready appendix', async ({ page }) => {
   const report = await popup;
   await expect(report.getByRole('heading',{name:'Completed work for Northstar Studio'})).toBeVisible();
   await expect(report.getByText('Total approved work: 19 hours')).toBeVisible();
+  await expect(report.locator('html')).toHaveAttribute('lang', 'en');
+  await expect(report.locator('main')).toHaveCount(1);
+  const results = await new AxeBuilder({page:report}).analyze();
+  expect(results.violations.filter(item => ['moderate','serious','critical'].includes(item.impact || ''))).toEqual([]);
 });
 test('@claim:redaction removes personal detail while preserving ISO and localized dates', async ({ page }) => {
   await page.goto('/demo');
@@ -75,13 +79,15 @@ test('@claim:real-workspace-persistence keeps imported real-workspace data after
     if (new URL(request.url()).origin !== 'http://127.0.0.1:4173') external.push(request.url());
     if (!['GET', 'HEAD'].includes(request.method())) writes.push(`${request.method()} ${request.url()}`);
   });
-  await page.goto('/workspace');
+  await page.goto('/demo');
+  await page.getByRole('button', {name:'Start for real'}).click();
+  await expect(page).toHaveURL(/\/workspace$/);
   await page.locator('#csv-file').setInputFiles({
     name: 'private-hours.csv',
     mimeType: 'text/csv',
     buffer: Buffer.from('Description,Hours\nPrepared private estimate,2')
   });
-  await expect(page.getByText('Imported 1 rows from private-hours.csv.')).toBeVisible();
+  await expect(page.getByText('Imported 1 row from private-hours.csv.')).toBeVisible();
   await expect.poll(() => page.evaluate(() => localStorage.getItem('worklog-appendix'))).toContain('Prepared private estimate');
   await page.reload();
   await expect(page.getByRole('article').getByText('Prepared private estimate', { exact:true })).toBeVisible();
@@ -90,10 +96,20 @@ test('@claim:real-workspace-persistence keeps imported real-workspace data after
 });
 
 test('@claim:demo-reset-isolation resets the sample and never reads or saves real workspace data', async ({ page }) => {
-  await page.addInitScript(() => localStorage.setItem('worklog-appendix', JSON.stringify({
-    rows: [{id:'real-1',date:'2026-08-29',project:'Private',milestone:'Private',description:'Confidential real work',hours:2,status:'approved',notes:'',included:true}],
-    settings: {client:'Private client',invoice:'INV-PRIVATE',period:'August',redact:true}
-  })));
+  await page.addInitScript(() => {
+    localStorage.setItem('worklog-appendix', JSON.stringify({
+      rows: [{id:'real-1',date:'2026-08-29',project:'Private',milestone:'Private',description:'Confidential real work',hours:2,status:'approved',notes:'',included:true}],
+      settings: {client:'Private client',invoice:'INV-PRIVATE',period:'August',redact:true}
+    }));
+    localStorage.setItem('worklog-appendix:presets', '[{"id":"private","name":"Private preset","client":"Private","invoice":"SECRET","period":"August"}]');
+    localStorage.setItem('sb_license:worklog-appendix', 'private-license');
+    const original = Storage.prototype.getItem;
+    (window as unknown as {__storageReads:string[]}).__storageReads = [];
+    Storage.prototype.getItem = function(key:string) {
+      (window as unknown as {__storageReads:string[]}).__storageReads.push(key);
+      return original.call(this,key);
+    };
+  });
   await page.goto('/demo');
   await expect(page.getByText('Confidential real work')).toHaveCount(0);
   await page.locator('#csv-file').setInputFiles({ name:'demo-change.csv', mimeType:'text/csv', buffer:Buffer.from('Description,Hours\nTemporary demo change,2') });
@@ -103,6 +119,11 @@ test('@claim:demo-reset-isolation resets the sample and never reads or saves rea
   await expect(page.getByText('Temporary demo change')).toHaveCount(0);
   await expect.poll(() => page.evaluate(() => localStorage.getItem('worklog-appendix'))).toContain('Confidential real work');
   await expect.poll(() => page.evaluate(() => localStorage.getItem('demo:worklog-appendix'))).toBeNull();
+  const protectedReads = await page.evaluate(() => (window as unknown as {__storageReads:string[]}).__storageReads
+    .filter(key => ['worklog-appendix','worklog-appendix:presets','sb_license:worklog-appendix'].includes(key)));
+  expect(protectedReads).toEqual(['worklog-appendix']);
+  await expect.poll(() => page.evaluate(() => localStorage.getItem('worklog-appendix:presets'))).toContain('Private preset');
+  await expect.poll(() => page.evaluate(() => localStorage.getItem('sb_license:worklog-appendix'))).toBe('private-license');
 });
 
 test('@claim:local-only keeps imported CSV data in the browser with no external requests', async ({ page }) => {
@@ -112,7 +133,9 @@ test('@claim:local-only keeps imported CSV data in the browser with no external 
     if (new URL(request.url()).origin !== 'http://127.0.0.1:4173') external.push(request.url());
     if (!['GET', 'HEAD'].includes(request.method())) writes.push(`${request.method()} ${request.url()}`);
   });
-  await page.goto('/workspace');
+  await page.goto('/demo');
+  await page.getByRole('button', {name:'Start for real'}).click();
+  await expect(page).toHaveURL(/\/workspace$/);
   await page.locator('#csv-file').setInputFiles({ name:'private-hours.csv', mimeType:'text/csv', buffer:Buffer.from('Description,Hours\nPrepared private estimate,2') });
   await expect.poll(() => page.evaluate(() => localStorage.getItem('worklog-appendix'))).toContain('Prepared private estimate');
   expect(external).toEqual([]);
@@ -179,7 +202,7 @@ test('invalid or negative CSV hours are rejected with a recovery instruction', a
     mimeType: 'text/csv',
     buffer: Buffer.from('Description,Hours\nCorrected row,2')
   });
-  await expect(page.getByText('Imported 1 rows from fixed-hours.csv.')).toBeVisible();
+  await expect(page.getByText('Imported 1 row from fixed-hours.csv.')).toBeVisible();
   await expect(page.locator('.work-row > b')).toHaveText('2 h');
 });
 
@@ -226,18 +249,96 @@ test('row inclusion and milestone changes keep keyboard focus on the edited cont
   await expect(page.locator('[data-milestone]').first()).toHaveValue('Focused milestone');
 });
 
-test('blank milestone names and zero selected rows show recovery instead of exporting empty output', async ({ page }) => {
-  await page.goto('/workspace');
+test('@claim:empty-output blocks blank milestone names and reports with no included rows', async ({ page }) => {
+  await page.goto('/demo');
+  await page.getByRole('button', {name:'Start for real'}).click();
   await page.locator('#csv-file').setInputFiles({ name:'one-row.csv', mimeType:'text/csv', buffer:Buffer.from('Description,Hours,Milestone\nOne useful row,1,Original') });
   page.once('dialog', dialog => dialog.accept('   '));
   await page.locator('[data-milestone]').selectOption('__new');
   await expect(page.locator('#status')).toHaveText('A milestone needs a name. Type a client-facing name, then try again.');
-  await expect(page.locator('#invoice-lines')).toHaveValue('Original — 1 hours');
+  await expect(page.locator('#invoice-lines')).toHaveValue('Original — 1 hour');
   await page.locator('[data-include]').uncheck();
   await expect(page.locator('#status')).toHaveText('Include at least one row before printing the appendix.');
   await expect(page.getByRole('button', { name:'Print appendix / save PDF' })).toBeDisabled();
   await expect(page.locator('.empty-selection')).toBeVisible();
   await expect(page.locator('#invoice-lines')).toHaveCount(0);
+});
+
+test('one-row output uses singular row and hour wording everywhere', async ({ page }) => {
+  await page.goto('/demo');
+  await page.locator('#csv-file').setInputFiles({ name:'one-hour.csv', mimeType:'text/csv', buffer:Buffer.from('Description,Hours,Milestone\nOne useful row,1,Release') });
+  await expect(page.locator('#status')).toHaveText('Imported 1 row from one-hour.csv.');
+  await expect(page.locator('.section-heading')).toContainText('1 row included');
+  await expect(page.locator('#invoice-lines')).toHaveValue('Release — 1 hour');
+  await expect(page.locator('.group h3')).toContainText('1 hour');
+  await expect(page.locator('.report-total')).toHaveText('1 approved hour');
+  const popup = page.waitForEvent('popup');
+  await page.getByRole('button', {name:'Print appendix / save PDF'}).click();
+  const report = await popup;
+  await expect(report.getByRole('heading', {name:'Release 1 hour'})).toBeVisible();
+  await expect(report.getByText('Total approved work: 1 hour')).toBeVisible();
+  await expect(report.locator('body')).not.toContainText('1 hours');
+});
+
+test('@claim:client-presets gates saved presets behind a verified one-time license and sends only its token', async ({ page }) => {
+  const billingRequests: Array<{url:string; method:string; body:string|null}> = [];
+  await page.route('https://api.sociobot.in/api/v1/products/worklog-appendix/verify?license=*', async route => {
+    const request = route.request();
+    billingRequests.push({url:request.url(),method:request.method(),body:request.postData()});
+    await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({valid:true,reason:'ok',expires_at:null})});
+  });
+  await page.goto('/demo');
+  await expect(page.getByRole('button', {name:'Save current details'})).toHaveCount(0);
+  await page.getByRole('button', {name:'Start for real'}).click();
+  await expect(page).toHaveURL(/\/workspace$/);
+  await expect(page.getByRole('heading', {name:'Reuse client details'})).toBeVisible();
+  await expect(page.getByRole('button', {name:'Save current details'})).toHaveCount(0);
+  await expect(page.getByRole('link', {name:'Buy client presets — $19'})).toHaveAttribute('href', 'https://api.sociobot.in/api/v1/products/worklog-appendix/checkout');
+  await page.goto('/demo?license=return-license-token');
+  await expect(page).toHaveURL('http://127.0.0.1:4173/workspace');
+  await expect(page.getByText('License active. Client presets are available.')).toBeVisible();
+  await expect.poll(() => page.evaluate(() => localStorage.getItem('sb_license:worklog-appendix'))).toBe('return-license-token');
+  for (const [selector,value] of [['#client','Acme Client'],['#invoice','INV-42'],['#period','August 2026']] as const) {
+    await page.locator(selector).evaluate((element,next) => {
+      const input = element as HTMLInputElement; input.value = next; input.dispatchEvent(new Event('change',{bubbles:true}));
+    }, value);
+    await expect(page.locator(selector)).toHaveValue(value);
+  }
+  await page.getByLabel('Preset name').fill('Acme monthly');
+  await page.getByRole('button', {name:'Save current details'}).click();
+  await page.locator('#client').evaluate(element => {
+    const input = element as HTMLInputElement; input.value = 'Changed client'; input.dispatchEvent(new Event('change',{bubbles:true}));
+  });
+  await expect(page.locator('#client')).toHaveValue('Changed client');
+  await page.getByRole('button', {name:'Apply preset'}).click();
+  await expect(page.locator('#client')).toHaveValue('Acme Client');
+  await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('worklog-appendix:presets') || '[]')[0]))
+    .toEqual(expect.objectContaining({name:'Acme monthly',client:'Acme Client',invoice:'INV-42',period:'August 2026'}));
+  await page.reload();
+  await expect(page.getByRole('button', {name:'Save current details'})).toBeVisible();
+  await page.getByRole('button', {name:'Remove stored license'}).click();
+  await page.getByLabel('Have a license? Paste it here').fill('pasted-license-token');
+  await page.getByRole('button', {name:'Restore license'}).click();
+  await expect(page.getByText('License active. Client presets are available.')).toBeVisible();
+  expect(billingRequests).toEqual([
+    {url:'https://api.sociobot.in/api/v1/products/worklog-appendix/verify?license=return-license-token',method:'GET',body:null},
+    {url:'https://api.sociobot.in/api/v1/products/worklog-appendix/verify?license=pasted-license-token',method:'GET',body:null}
+  ]);
+});
+
+test('an invalid or revoked license locks paid presets without blocking free export', async ({page}) => {
+  await page.route('https://api.sociobot.in/api/v1/products/worklog-appendix/verify?license=*', route =>
+    route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({valid:false,reason:'revoked',expires_at:null})}));
+  await page.goto('/demo');
+  await page.getByRole('button', {name:'Start for real'}).click();
+  await page.getByLabel('Have a license? Paste it here').fill('revoked-token');
+  await page.getByRole('button', {name:'Restore license'}).click();
+  await expect(page.getByText('License no longer active. Buy or restore a current license.')).toBeVisible();
+  await expect(page.getByRole('button', {name:'Save current details'})).toHaveCount(0);
+  await page.getByRole('button', {name:'Load sample data instead'}).click();
+  const popup = page.waitForEvent('popup');
+  await page.getByRole('button', {name:'Print appendix / save PDF'}).click();
+  await expect((await popup).getByText('Total approved work: 19 hours')).toBeVisible();
 });
 
 test('SPA route changes focus and announce the new page heading', async ({ page }) => {
@@ -303,7 +404,7 @@ for (const key of ['Enter', 'Space']) {
   test(`keyboard users can Tab to the visible CSV picker and open it with ${key}`, async ({ page }) => {
     await page.goto('/workspace');
     const picker = page.locator('#csv-file');
-    for (let index = 0; index < 16 && !await picker.evaluate(element => element === document.activeElement); index++) await page.keyboard.press('Tab');
+    for (let index = 0; index < 30 && !await picker.evaluate(element => element === document.activeElement); index++) await page.keyboard.press('Tab');
     await expect(picker).toBeFocused();
     await expect(picker).toBeVisible();
     const chooser = page.waitForEvent('filechooser');
@@ -331,6 +432,18 @@ test('390px controls meet the 44px touch and high-contrast focus baselines', asy
   await page.locator('[data-milestone]').first().focus();
   const select = await page.locator('[data-milestone]').first().boundingBox();
   expect(select?.height).toBeGreaterThanOrEqual(44);
+});
+
+test('the styled 404 has 44px touch targets at 390px and passes axe', async ({ page }) => {
+  await page.setViewportSize({width:390,height:844});
+  await page.goto('/404.html');
+  for (const link of await page.getByRole('link').all()) {
+    const box = await link.boundingBox();
+    expect(box?.width).toBeGreaterThanOrEqual(44);
+    expect(box?.height).toBeGreaterThanOrEqual(44);
+  }
+  const results = await new AxeBuilder({page}).analyze();
+  expect(results.violations.filter(item => ['serious','critical'].includes(item.impact || ''))).toEqual([]);
 });
 
 test('the production service worker has a release-specific cache and retires old caches', () => {

@@ -95,6 +95,9 @@ footer a {
   .file-picker,
   .setup input,
   .setup select,
+  .preset-panel input,
+  .preset-panel select,
+  .license-form input,
   .milestone-label select,
   .report-panel textarea { background: #173552; color: var(--ink); }
   .file-picker input { color: var(--ink); }

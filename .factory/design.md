@@ -34,3 +34,5 @@ Hero art is an original generated editorial still: translucent document layers, 
 ### Shape language
 
 Document corners are 18 px; panes have a one-pixel blue-grey rim and restrained shadow. Primary controls are warm amber rounded capsules. The 404 treatment uses a lone lit waypoint on the same map field.
+
+The paid client-preset area uses the same document-desk hierarchy. It is a ruled section rather than a promotional card, so the free report remains primary and the optional license does not interrupt the workflow.

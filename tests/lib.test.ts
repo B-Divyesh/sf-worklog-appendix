@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { csvRows, parseWorklogCsv, sampleRows, groups, invoiceLines, reportMarkup, safeText, escapeHtml } from '../src/lib';
+import { csvRows, parseWorklogCsv, sampleRows, groups, invoiceLines, plural, reportMarkup, safeText, escapeHtml } from '../src/lib';
 
 describe('worklog conversion', () => {
   it('imports approved rows and keeps quoted descriptions', () => {
@@ -23,11 +23,19 @@ describe('worklog conversion', () => {
     expect(lines).toContain('Client portal — 8 hours');
     expect(lines).toHaveLength(4);
   });
+  it('uses singular and plural client-facing quantity labels', () => {
+    expect(plural(1, 'hour')).toBe('1 hour');
+    expect(plural(1, 'row')).toBe('1 row');
+    expect(plural(1.5, 'hour')).toBe('1.5 hours');
+    expect(invoiceLines([{...sampleRows[0], hours:1, milestone:'Release'}])).toEqual(['Release — 1 hour']);
+  });
   it('produces a print-ready row for each included record', () => {
     const selected=sampleRows.filter(row=>row.included);
     const markup=reportMarkup(sampleRows,{client:'Northstar Studio',invoice:'INV-2048',period:'August',redact:true});
     expect(markup).toContain('Completed work for Northstar Studio');
     expect((markup.match(/<tr>/g)||[]).length).toBe(selected.length + 4);
+    expect(markup).toContain('<html lang="en">');
+    expect(markup).toContain('<main>');
   });
   it('removes an email and phone detail from the client report', () => {
     expect(safeText('Ask sam@example.com or +1 (555) 444-1212',true)).toBe('Ask [email removed] or [phone removed]');
