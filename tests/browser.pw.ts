@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
+import { spawnSync } from 'node:child_process';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 
 test('@claim:csv-import imports a quoted CSV row and its hours into the demo workspace', async ({ page }) => {
@@ -684,6 +685,8 @@ test('the production service worker has a release-specific cache and retires old
 });
 
 test('@claim:static-build-output writes every deployable route and required asset to dist', () => {
+  const build = spawnSync(process.platform === 'win32' ? 'npm.cmd' : 'npm', ['run','build'], {encoding:'utf8'});
+  expect(build.status, `${build.stdout}\n${build.stderr}`).toBe(0);
   const required = [
     'index.html', 'demo/index.html', 'workspace/index.html', 'privacy/index.html',
     'terms/index.html', '404.html', 'robots.txt', 'sitemap.xml',
