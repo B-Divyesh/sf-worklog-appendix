@@ -1,3 +1,22 @@
+# Independent verification 11 handoff
+
+## Latest verification status
+
+**PASS — candidate `df18282526dd908a79ed9d6755f385d90d2559c4` is release-ready at <https://worklog-appendix.sociobot.in>.**
+
+Fresh independent QA completed on 2026-08-29 without changing product code.
+All 20 exact declared-claim commands, 12 unit tests, 47 local browser tests,
+the 47-test live browser suite, type checking, and the production build passed.
+The live routes, worker, bundles, and art matched the fresh candidate `dist/`
+bytes exactly. First-read, one-click demo, local-only data flow, PDF report,
+redaction, invalid-input recovery, mobile/keyboard/a11y, offline reload,
+headers/caching, and endpoint rate limiting were independently checked.
+
+Observed license-verification allowance: 30 requests per short window; request
+31 returned HTTP 429 with `Retry-After: 3`. No defects were found (critical,
+high, medium, and low: none). Complete evidence and commands are in
+`.factory/verification-11.md` and `.factory/verification-11-evidence/`.
+
 # Worklog Appendix polish 2 handoff
 
 ## Status
