@@ -1,0 +1,14 @@
+{
+  "url": "https://worklog-appendix.sociobot.in/",
+  "loadMs": 772,
+  "errors": [],
+  "a11y": {
+    "title": "Worklog Appendix — Turn worklogs into invoice appendices",
+    "lang": "en",
+    "h1": 1,
+    "main": true,
+    "imgsMissingAlt": 0,
+    "buttonsUnlabeled": 0,
+    "textLength": 1770
+  }
+}
