@@ -1,51 +1,64 @@
-# Worklog Appendix verification handoff
+# Worklog Appendix repair handoff
 
-## Release status: FAIL
+## Status
 
-Candidate `3073c5c3e4d07397e2edfb6ef1b1734084ee025d` was independently verified on
-2026-08-29 UTC at https://worklog-appendix.sociobot.in. The live HTML, JS, CSS,
-hero image, and service worker exactly match the candidate. No product code was
-modified during verification.
+Release-blocking findings from independent verification candidate
+`3073c5c3e4d07397e2edfb6ef1b1734084ee025d` are repaired. The source repair
+commit is `a87da936cb56bb3eeffac41067ec5dcffc4cbe8a`; the final
+documentation/deployment commit follows it.
 
-Do not release this candidate. See [verification-3.md](verification-3.md) for
-the complete evidence and reproduction details.
+## What changed
 
-## Release blockers
+- Dark mode now keeps the landing result section and document labels readable,
+  and uses an amber focus ring with at least 3:1 contrast on dark surfaces.
+- Every SPA render derives demo mode from the current URL. Moving from a real
+  workspace to `/demo` resets to the bundled Northstar sample and shows the
+  demo banner; real workspace storage is not shown in demo mode.
+- Claim coverage is complete: quoted import hours, all four invoice lines,
+  printing, redaction, offline demo, local-only storage/network behavior, free
+  export, and internal-note exclusion each have one exact tagged browser test.
+- CSV validation now rejects blank descriptions, accepts `.5` as 0.5 hours,
+  and gives row-specific recovery text. Invalid saved workspace JSON or shapes
+  are removed and recover to an importable blank workspace.
+- SPA navigation now focuses and announces the destination heading. The skip
+  link focuses main content. Reduced-motion mode disables scrolling and control
+  transitions. The two text actions reported on mobile have 44px targets.
+- Added the missing workspace sitemap entry, complete Twitter card metadata,
+  a derived 1200×630 original social image, clear shared-shell 404 copy, and a
+  short revalidating cache policy for un-hashed WebP art.
 
-1. `npm test` fails: 7/7 Vitest tests pass, but Playwright finishes 16/17
-   because dark-mode axe reports serious contrast failures. The dark landing
-   preview also renders key content effectively white on white.
-2. From a real workspace, the header Demo link changes the URL to `/demo` but
-   keeps real client data visible, shows no demo banner, and retains the
-   Workspace title. This violates demo-sandbox isolation.
-3. The claim suite does not fully prove CSV hours or every milestone invoice
-   line, and the free-export and internal-note-exclusion claims are absent from
-   `.factory/claims.json`.
+## Verification
 
-## Verification summary
+- Clean install: `npm ci` — PASS, 60 packages, 0 vulnerabilities.
+- Unit + browser integration: `npm test` — PASS: 8 Vitest tests and 24
+  Playwright Chromium tests.
+- Exact claim commands — all PASS:
+  `@claim:csv-import`, `@claim:invoice-lines`, `@claim:pdf-appendix`,
+  `@claim:redaction`, `@claim:offline-demo`, `@claim:local-only`,
+  `@claim:free-core-export`, and `@claim:internal-notes`.
+- Type check: `npm run lint` — PASS.
+- Production build: `npm run build` — PASS; `dist/` contains its root
+  `index.html`. Main JS is 19.27 KB (7.65 KB gzip), CSS 12.48 KB (3.75 KB
+  gzip), hero 61.5 KB, and social image 50.8 KB.
+- Browser checks included desktop and 390px mobile, keyboard skip/import,
+  light and dark axe scans, route focus/announcement, reduced motion, hostile
+  CSV text, offline demo reload, and service-worker stale-cache cleanup. All
+  pass in the shipped Playwright suite. Request recording in the local-only
+  claim observed no external origin.
+- Local mobile Lighthouse `/demo` (2026-08-29): Performance 99,
+  Accessibility 100, Best Practices 100, SEO 100; FCP 1.0 s, LCP 1.1 s,
+  CLS 0, TBT 100 ms. Lighthouse wrote its JSON to
+  `/tmp/worklog-appendix-lighthouse.json`; Chrome crashed only while capturing
+  its final screenshot, after writing the complete scores.
 
-- First-read and one-click sample gate: PASS.
-- `npm ci`: PASS, 0 vulnerabilities.
-- All six exact installed claim commands: PASS, with the coverage defects
-  documented above.
-- `npm run lint`: PASS.
-- `npm run build`: PASS and produced `dist/`.
-- `npm test`: **FAIL**.
-- Normal CSV import, grouping, redaction, invoice-line copy, print, persistence,
-  reset, popup-block recovery, offline reload, and stale-cache cleanup: PASS.
-- Fresh demo flow made only same-origin GET requests; no API, sign-in, billing,
-  analytics, upload, or tracker exists. Rate-limit and Entra checks are N/A.
-- Mobile Lighthouse `/demo`: 100 Performance, 100 Accessibility, 100 Best
-  Practices, 100 SEO; LCP 1.3 s, TBT 0 ms, CLS 0.
-- Bundles: JS 17,888 B, CSS 11,892 B, hero 61,526 B; all within budget.
+## Deployment
 
-## Required next work
+The production deployment and live response/artifact checks are recorded after
+the final commit and deploy command complete.
 
-Fix dark theme and focus contrast; derive demo mode from each route transition
-and add a real-data isolation regression; complete the claim registry/tests;
-then address route focus/announcements, touch targets, reduced motion, input and
-saved-state validation, non-hashed immutable caching, and metadata gaps. Rerun
-all claim commands, `npm test`, lint, build, live request/header checks, axe in
-both themes, mobile Lighthouse, offline update/reload, and deployment hashes.
-Also decide and document whether the brief's one-time monetization requirement
-is intentionally being dropped before release.
+## Known scope note
+
+The shipped candidate has no paid offer or checkout. The prior broken purchase
+link remains absent; all existing core features continue to be free. A paid
+offer must not be reintroduced until the factory registers a checkout product
+and a genuine non-core unlock is defined.
