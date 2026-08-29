@@ -2,7 +2,7 @@
 
 ## Status
 
-Repair of failed candidate `36f233e65b03e27673b4097611a15448f2867440` is ready for production deployment. It retains the Vite static-web artifact, `dist/` output, and Azure Static Web Apps deployment class.
+Repair of failed candidate `36f233e65b03e27673b4097611a15448f2867440` is deployed from source commit `276ff81` as Azure Static Web Apps deployment `07582427-2559-4df6-bfea-ce103d81af80`. It retains the Vite static-web artifact, `dist/` output, and Azure Static Web Apps deployment class.
 
 ## Root cause and repair
 
@@ -23,7 +23,16 @@ The expanded checks also found and repaired two accessibility issues: entrance o
 
 ## Deploy and live verification
 
-Deploy with `/opt/fleet/lib/deploy-static.sh worklog-appendix dist`. After upload, rerun `verify-url.sh`, live privacy/offline/accessibility checks, route and header checks, and compare live artifact hashes with `dist/`. Exact production evidence will be appended after deployment.
+- `/opt/fleet/lib/deploy-static.sh worklog-appendix dist` — PASS. It reused `sf-worklog-appendix` in `centralus`; the custom domain returned HTTPS 200.
+- `/opt/fleet/lib/verify-url.sh` passed live `/` and `/demo`: correct route titles, `lang=en`, one h1, main landmark, complete image alt text, labeled buttons, and zero console/page errors. Evidence is in `/tmp/worklog-appendix-repair-5/live-root` and `live-demo` for this worker run.
+- Live light/dark axe scans on `/`, `/demo`, `/workspace`, `/privacy`, and `/terms` found zero serious/critical issues. The styled 404 returned HTTP 404 and also had zero serious/critical findings.
+- Live privacy import stored the unique CSV row in `localStorage` and recorded zero external requests and zero non-GET/HEAD requests. No analytics, upload, account, payment, or other API endpoint was contacted.
+- Live included-row smoke excluded the unique Discovery row from the client preview and printed appendix and changed the matching invoice line from 3.5 to 2 hours.
+- Live offline/update smoke reloaded the Northstar demo offline. `registration.update()` left one activated worker, no waiting worker, and one current cache: `worklog-appendix-9be88bb554a5`.
+- Live mobile/keyboard smoke found no horizontal overflow at 390 px, used the skip link to focus `main`, and opened the CSV chooser with both Enter and Space.
+- All intended routes returned 200; the unknown route returned 404. Live responses include HSTS, `nosniff`, strict-origin referrer policy, and the self-only CSP with `frame-ancestors` as a response header.
+- Live Lighthouse 13.4.1 mobile `/demo`: Performance 100, Accessibility 100, Best Practices 100, SEO 100; FCP/LCP 0.8 s, TBT 40 ms, CLS 0. Report: `/tmp/worklog-appendix-repair-5/lighthouse-live-demo.json`.
+- Production identity matches the committed clean build exactly: `index.html` SHA-256 `d0543fe6e69372f69357ffacfc3b60a1c75e330cbbfb9475703e31ca2e1a1d90`; CSS `638d7d36fb8e1a0e131ef83b570a72a3591c5b5f3ef4d74301ee1e3320473850`; JS `ff245a35d46527bd8e6e339adb3c191d0734a803e5730389c5e0c4d78d682d01`.
 
 ## Known gaps
 
