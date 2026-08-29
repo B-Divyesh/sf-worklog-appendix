@@ -1,39 +1,76 @@
-# Worklog Appendix repair-5 handoff
+# Worklog Appendix verification-6 handoff
 
 ## Status
 
-Repair of failed candidate `36f233e65b03e27673b4097611a15448f2867440` is deployed from source commit `276ff81` as Azure Static Web Apps deployment `07582427-2559-4df6-bfea-ce103d81af80`. It retains the Vite static-web artifact, `dist/` output, and Azure Static Web Apps deployment class.
+**FAIL — candidate `e6c72e0fa488e09c2939e8fb737ad92fce3e11be`
+must not be released.** The live site at
+https://worklog-appendix.sociobot.in exactly matches the candidate, so this is
+not a deployment-only failure.
 
-## Root cause and repair
+Full evidence and the claims matrix are in `.factory/verification-6.md`.
 
-Verification 5 found two public promises without one-to-one claim coverage. The core sentence “Only included rows appear in the report” now has the `included-rows` entry in `.factory/claims.json` and exactly one `@claim:included-rows` Playwright test. That test excludes a unique sample row, proves it leaves the client preview, proves its milestone invoice total changes, and compares every printed description with the checked source rows.
+## What was verified
 
-The broad sentence saying the tool does not run timers, invoice clients, or monitor anyone was removed because those unrelated absences are not useful observable product behavior. The local-data section now repeats the existing `local-only` promise. A unit regression verifies unique claim ids, exact claim commands, a one-to-one manifest/tag set, the included-row copy/entry pair, and continued removal of the broad boundary sentence.
+- Started from the exact clean candidate; installed with `npm ci`.
+- Ran every command in `.factory/claims.json` separately: all 12 passed.
+- Ran `npm run lint`, full `npm test`, and `npm run build`: all passed (10 unit
+  and 35 Playwright tests; `dist/` produced).
+- Exercised the live cold first read, one-click demo, reset/isolation, copy,
+  print/PDF output, representative real CSV import, persistence, boundary and
+  invalid input recovery, corrupt storage, blocked pop-up recovery, mobile,
+  keyboard, route focus, reduced motion, light/dark axe, 404, headers, request
+  privacy, caching, service-worker update, and offline reload.
+- Ran the factory URL verifier against live `/` and `/demo`.
+- Ran Lighthouse 13.4.1 mobile against live `/demo`: 99 Performance, 100
+  Accessibility, 100 Best Practices, 100 SEO; LCP 1.0 s, TBT 110 ms, CLS 0.
+- Compared fresh local and live HTML, JS, CSS, hero/social art, service worker,
+  and direct-route documents byte-for-byte; all match.
 
-The expanded checks also found and repaired two accessibility issues: entrance opacity temporarily reduced dark-theme contrast, and native file input activation was inconsistent across Enter and Space. Motion now uses translation without opacity, and both keyboard keys invoke the browser file picker. The design motion policy and copy audit were updated.
+## Release blockers
 
-## Local verification
+1. **High — inaccessible core report:** the generated print/PDF document has
+   serious axe `html-has-lang` plus moderate landmark findings. It lacks
+   `lang="en"` and `<main>`.
+2. **High — incomplete claims contract:** README promises that empty groups
+   and empty reports are blocked with a clear next step, but no
+   `.factory/claims.json` entry and exact `@claim:` test represents it. The
+   `real-workspace-persistence` and `local-only` claim tests also open
+   `/workspace` directly instead of entering through the required demo.
 
-- Exact clean gate: `npm ci && npm run lint && npm test && npm run build` — PASS. Install audited 61 packages with 0 vulnerabilities; TypeScript passed; 10 Vitest tests and 35 Playwright tests passed; Vite wrote `dist/`.
-- Every exact command in `.factory/claims.json` ran separately — all 12 selected exactly one passing Playwright test.
-- Browser coverage includes CSV import/error recovery, preview/invoice/print filtering, redaction, persistence, demo isolation/reset, same-origin privacy logging, mobile 390 px, 200% reflow, skip link and route focus, Enter/Space picker activation, 44 px targets, reduced motion, light/dark axe checks on all five routes, offline reload, service-worker update/cache retirement, metadata, and 404 configuration.
-- `/opt/fleet/lib/verify-url.sh` passed local production `/` and `/demo`: route titles, `lang=en`, one h1, main landmark, image alt text, labeled buttons, and zero console/page errors. Evidence is in `/tmp/worklog-appendix-repair-5/local-root` and `local-demo` for this worker run.
-- Lighthouse 13.4.1 mobile local `/demo`: Performance 100, Accessibility 100, Best Practices 100, SEO 100; FCP 0.9 s, LCP 1.0 s, TBT 50 ms, CLS 0. Report: `/tmp/worklog-appendix-repair-5/lighthouse-local-demo.json`.
-- Production assets: JS 20,340 B / 7.97 KB gzip; CSS 13,667 B / 3.96 KB gzip; hero WebP 61,526 B. There are no third-party runtime scripts, fonts, analytics, or trackers.
+## Other defects
 
-## Deploy and live verification
+- **Medium:** an exactly one-hour group produces `1 hours` in invoice lines,
+  the print group heading, and the print total. Import status also says
+  `Imported 1 rows`.
+- **Medium:** every link on the 390 px styled 404 is under 44 px high.
+- **Low / contract gap:** the researched one-time paid model is absent. The
+  previous handoff calls the all-free scope intentional, but the repository
+  contains no revised brief.
 
-- `/opt/fleet/lib/deploy-static.sh worklog-appendix dist` — PASS. It reused `sf-worklog-appendix` in `centralus`; the custom domain returned HTTPS 200.
-- `/opt/fleet/lib/verify-url.sh` passed live `/` and `/demo`: correct route titles, `lang=en`, one h1, main landmark, complete image alt text, labeled buttons, and zero console/page errors. Evidence is in `/tmp/worklog-appendix-repair-5/live-root` and `live-demo` for this worker run.
-- Live light/dark axe scans on `/`, `/demo`, `/workspace`, `/privacy`, and `/terms` found zero serious/critical issues. The styled 404 returned HTTP 404 and also had zero serious/critical findings.
-- Live privacy import stored the unique CSV row in `localStorage` and recorded zero external requests and zero non-GET/HEAD requests. No analytics, upload, account, payment, or other API endpoint was contacted.
-- Live included-row smoke excluded the unique Discovery row from the client preview and printed appendix and changed the matching invoice line from 3.5 to 2 hours.
-- Live offline/update smoke reloaded the Northstar demo offline. `registration.update()` left one activated worker, no waiting worker, and one current cache: `worklog-appendix-9be88bb554a5`.
-- Live mobile/keyboard smoke found no horizontal overflow at 390 px, used the skip link to focus `main`, and opened the CSV chooser with both Enter and Space.
-- All intended routes returned 200; the unknown route returned 404. Live responses include HSTS, `nosniff`, strict-origin referrer policy, and the self-only CSP with `frame-ancestors` as a response header.
-- Live Lighthouse 13.4.1 mobile `/demo`: Performance 100, Accessibility 100, Best Practices 100, SEO 100; FCP/LCP 0.8 s, TBT 40 ms, CLS 0. Report: `/tmp/worklog-appendix-repair-5/lighthouse-live-demo.json`.
-- Production identity matches the committed clean build exactly: `index.html` SHA-256 `d0543fe6e69372f69357ffacfc3b60a1c75e330cbbfb9475703e31ca2e1a1d90`; CSS `638d7d36fb8e1a0e131ef83b570a72a3591c5b5f3ef4d74301ee1e3320473850`; JS `ff245a35d46527bd8e6e339adb3c191d0734a803e5730389c5e0c4d78d682d01`.
+## Passing evidence
 
-## Known gaps
+- First-read/demo gate passes in plain words on desktop and 390 px.
+- Live normal flow and input recovery work; privacy/redaction/persistence and
+  demo isolation behave as promised.
+- Live route axe checks have no serious/critical findings in light or dark;
+  the serious issue is specifically in the generated report.
+- Fresh request logging found only 29 same-origin GETs and no writes or third
+  parties. Security and caching headers are present.
+- Offline reload and service-worker update pass.
+- JS, CSS, image, LCP, TBT, CLS, and Lighthouse score budgets pass.
+- No server API or sign-in exists, so rate-limit and Entra checks do not apply.
 
-No repair gap remains. The product deliberately has no paid tier; core import and export remain free, as documented in the previous accepted scope decision.
+## Reproduce
+
+```sh
+npm ci
+npm run lint
+npm test
+npm run build
+```
+
+For the primary output defect, open `/demo`, print the appendix, and axe-scan
+the popup document. For the wording defect, import
+`Description,Hours,Milestone\nOne row,1,Release` and inspect the invoice line
+and print output. After fixes, deploy the new `dist/` and repeat independent
+live verification.
