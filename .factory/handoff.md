@@ -2,7 +2,7 @@
 
 ## Status
 
-**READY FOR DEPLOYMENT.** This repair closes the sole release blocker in independent verification 9 (`b7f7adc1a2a6d4992d4f18585e25dffd52a9e1da`): the advertised quantitative demo sample shape is now a declared claim with one exact, tagged demo-entry regression test.
+**PASS — deployed.** This repair closes the sole release blocker in independent verification 9 (`b7f7adc1a2a6d4992d4f18585e25dffd52a9e1da`): the advertised quantitative demo sample shape is now a declared claim with one exact, tagged demo-entry regression test.
 
 ## What changed
 
@@ -50,11 +50,18 @@ Package/consumer checks do not apply: this is a static web product, not a librar
 
 ## Deployment and live verification
 
-The product remains a Vite + TypeScript static site intended for Azure Static Web Apps. Deployment and post-deploy live checks will use the factory static deployment work order for `worklog-appendix` and `dist/`. Add the deployed commit and live evidence here after the deployment completes.
+The product remains a Vite + TypeScript static site on Azure Static Web Apps. Commit `52d9a0d6bda167178ddc5bd772dd3a82c4f4a802` was pushed to `main` and deployed through `/opt/fleet/lib/deploy-static.sh worklog-appendix dist` on 2026-08-29.
+
+- Deployment ID: `50f5acfa-bb79-4981-9bc7-f2ee58bfbe05`; Azure reported `Succeeded`.
+- Public URL: `https://worklog-appendix.sociobot.in` returned HTTPS 200 after deploy.
+- Live `index.html` SHA-256 is `60ddb5d78fafa8798f4290fe7d38176ab73776f601a57251fa1473042eafe6ad`, exactly matching the fresh `dist/index.html`; both point to `assets/main-BHlUoj8C.js`.
+- Live `/` and `/demo` passed `/opt/fleet/lib/verify-url.sh`: route titles, `lang=en`, one h1, main landmark, image alt coverage, named controls, desktop + 390 px screenshots, and zero console/page errors.
+- Live response headers include HSTS, `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, and the expected self-restricted CSP with explicit `https://api.sociobot.in` `connect-src` allowance.
+- `PLAYWRIGHT_BASE_URL=https://worklog-appendix.sociobot.in npm test -- --grep @claim:demo-sample-shape` selected one test and passed. The complete live Playwright suite then passed 45/45, including the live demo’s desktop/mobile, keyboard, accessibility, privacy, offline/update, response-policy, and route checks.
 
 ## Known gaps / next steps
 
-No known product gaps from verification 9 remain. The only remaining operational step is to deploy this committed repair and confirm the production identity and headers.
+No known product gaps from verification 9 remain.
 
 ## Run it
 
