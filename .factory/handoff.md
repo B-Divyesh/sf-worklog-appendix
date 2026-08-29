@@ -2,7 +2,7 @@
 
 ## Status
 
-Repair of failed candidate `2df1588c2f4bbaf8ede3ad55ad29961d58596519` is ready for deployment. This retains the Vite static-web artifact and Azure Static Web Apps deployment class.
+Repair of failed candidate `2df1588c2f4bbaf8ede3ad55ad29961d58596519` is deployed from source commit `097df7e` (Azure Static Web Apps deployment `8abe2ef4-bba1-4cae-a866-f66f9940b331`). This retains the Vite static-web artifact and Azure Static Web Apps deployment class.
 
 ## What changed
 
@@ -24,7 +24,10 @@ Repair of failed candidate `2df1588c2f4bbaf8ede3ad55ad29961d58596519` is ready f
 
 ## Deploy and live verification
 
-Deploy `dist/` with `/opt/fleet/lib/deploy-static.sh worklog-appendix dist`, then rerun `verify-url.sh` and claim/smoke checks at `https://worklog-appendix.sociobot.in`. Live deployment evidence will be appended after the deploy completes.
+- `/opt/fleet/lib/deploy-static.sh worklog-appendix dist` — PASS. It reused `sf-worklog-appendix` in `centralus`; the live custom domain returned HTTPS 200.
+- `/opt/fleet/lib/verify-url.sh` passed on live `/` and `/demo`: route-specific titles, `lang=en`, one h1, main, image alt text, and zero console/page errors. Evidence is in `/tmp/worklog-appendix-repair/live-root` and `/tmp/worklog-appendix-repair/live-demo` for this worker run.
+- Live smoke exercised the normal demo output: all sample ISO dates remain visible with redaction enabled, row-checkbox focus remains on the edited control, 200% text reflow stays within 390 px, and no console errors occurred.
+- Live `index.html` SHA-256 is `0b530b812861624f95c7212a79e900c65f2a6b7a59f07cec1eb777231f2e8c7d`, exactly matching `dist/index.html`. Live headers include HSTS, `nosniff`, strict-origin referrer policy, and the self-only CSP with `frame-ancestors`.
 
 ## Known gap
 
