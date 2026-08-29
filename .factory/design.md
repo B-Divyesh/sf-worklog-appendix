@@ -29,6 +29,8 @@ Sheets rise into view with a 180 ms opacity/translate transition. Milestone rows
 
 Hero art is an original generated editorial still: translucent document layers, a glowing path of milestone markers, and a cool ink field. It is decorative context, never contains required text. Prompt sheet: "luminous glass data landscape, translucent paper sheets and small amber waypoint lights floating over a deep navy cartographic field, elegant editorial product illustration, frosted glass, warm dawn glow, precise abstract geometry, no people, no text, no logos, no watermark". Negative list: UI screenshots, legible words, brands, hands, money imagery, gradients used as background blobs. Generated with the factory image deployment on 2026-08-28; original asset, optimized to WebP before shipping.
 
+`assets/social.webp` is a 1200×630 center crop derived from that same original hero art on 2026-08-29 for Open Graph and Twitter cards; it contains no required copy.
+
 ### Shape language
 
 Document corners are 18 px; panes have a one-pixel blue-grey rim and restrained shadow. Primary controls are warm amber rounded capsules. The 404 treatment uses a lone lit waypoint on the same map field.

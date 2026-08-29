@@ -2,16 +2,19 @@ import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { readFileSync } from 'node:fs';
 
-test('@claim:csv-import imports a CSV into the local workspace', async ({ page }) => {
+test('@claim:csv-import imports a quoted CSV row and its hours into the demo workspace', async ({ page }) => {
   await page.goto('/demo');
-  await page.locator('#csv-file').setInputFiles({name:'hours.csv',mimeType:'text/csv',buffer:Buffer.from('Date,Description,Hours,Milestone,Status\n2026-08-01,Prepared handoff,2,Release,approved')});
+  await page.locator('#csv-file').setInputFiles({name:'hours.csv',mimeType:'text/csv',buffer:Buffer.from('Date,Description,Hours,Milestone,Status\n2026-08-01,"Prepared, reviewed, and shipped",1.25,Release,approved')});
   await expect(page.getByText('Imported 1 rows from hours.csv.')).toBeVisible();
-  await expect(page.getByRole('article').getByText('Prepared handoff', {exact:true})).toBeVisible();
+  await expect(page.getByRole('article').getByText('Prepared, reviewed, and shipped', {exact:true})).toBeVisible();
+  await expect(page.locator('.work-row > b')).toHaveText('1.25 h');
 });
 test('@claim:invoice-lines creates matching client invoice lines', async ({ page }) => {
   await page.goto('/demo');
-  await expect(page.locator('#invoice-lines')).toHaveValue(/Client portal — 8 hours/);
-  await expect(page.locator('.report-panel .group h3').filter({hasText:'Client portal'})).toBeVisible();
+  await expect(page.locator('#invoice-lines')).toHaveValue([
+    'Discovery & plan — 3.5 hours', 'Design system — 4.5 hours',
+    'Client portal — 8 hours', 'Client review — 3 hours'
+  ].join('\n'));
 });
 test('@claim:pdf-appendix opens a print-ready appendix', async ({ page }) => {
   await page.goto('/demo');
@@ -71,6 +74,24 @@ test('@claim:local-only keeps imported CSV data in the browser with no external 
   expect(external).toEqual([]);
 });
 
+test('@claim:free-core-export lets a demo user print an appendix without an account or payment', async ({ page }) => {
+  await page.goto('/demo');
+  const popup = page.waitForEvent('popup');
+  await page.getByRole('button', { name: 'Print appendix / save PDF' }).click();
+  const report = await popup;
+  await expect(report.getByText('Total approved work: 19 hours')).toBeVisible();
+});
+
+test('@claim:internal-notes never includes internal notes in the client preview or printed appendix', async ({ page }) => {
+  await page.goto('/demo');
+  await expect(page.locator('.report-panel')).not.toContainText('priya@northstar.example');
+  const popup = page.waitForEvent('popup');
+  await page.getByRole('button', { name: 'Print appendix / save PDF' }).click();
+  const report = await popup;
+  await expect(report.locator('body')).not.toContainText('Internal: client mentioned');
+  await expect(report.locator('body')).not.toContainText('priya@northstar.example');
+});
+
 test('invalid or negative CSV hours are rejected with a recovery instruction', async ({ page }) => {
   await page.goto('/workspace');
   for (const hours of ['abc', '-2']) {
@@ -79,7 +100,7 @@ test('invalid or negative CSV hours are rejected with a recovery instruction', a
       mimeType: 'text/csv',
       buffer: Buffer.from(`Description,Hours\nIncorrect row,${hours}`)
     });
-    await expect(page.locator('#status')).toHaveText('Row 2 has an invalid Hours value. Use a zero or positive number, then import the file again.');
+    await expect(page.locator('#status')).toHaveText('Row 2 has an invalid Hours value. Use a zero or positive number (for example 0.5), then import the file again.');
     await expect(page.getByRole('article')).toHaveCount(0);
   }
   await page.locator('#csv-file').setInputFiles({
@@ -89,6 +110,41 @@ test('invalid or negative CSV hours are rejected with a recovery instruction', a
   });
   await expect(page.getByText('Imported 1 rows from fixed-hours.csv.')).toBeVisible();
   await expect(page.locator('.work-row > b')).toHaveText('2 h');
+});
+
+test('blank descriptions are rejected, leading-decimal hours are accepted, and a following valid import recovers', async ({ page }) => {
+  await page.goto('/workspace');
+  await page.locator('#csv-file').setInputFiles({ name:'blank-description.csv', mimeType:'text/csv', buffer:Buffer.from('Description,Hours\n,1') });
+  await expect(page.locator('#status')).toHaveText('Row 2 needs a Description. Add a description, then import the file again.');
+  await page.locator('#csv-file').setInputFiles({ name:'half-hour.csv', mimeType:'text/csv', buffer:Buffer.from('Description,Hours\nReviewed work,.5') });
+  await expect(page.locator('.work-row > b')).toHaveText('0.5 h');
+});
+
+test('invalid saved workspace data is discarded and leaves an importable workspace', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('worklog-appendix', '{}'));
+  await page.goto('/workspace');
+  await expect(page.locator('#status')).toContainText('Saved workspace data was invalid and has been cleared.');
+  await expect(page.getByRole('heading', { name:'Start with a worklog CSV' })).toBeVisible();
+  await expect.poll(() => page.evaluate(() => localStorage.getItem('worklog-appendix'))).toBeNull();
+});
+
+test('SPA navigation to Demo resets real data into the isolated sample workspace', async ({ page }) => {
+  await page.goto('/workspace');
+  await page.locator('#csv-file').setInputFiles({ name:'private.csv', mimeType:'text/csv', buffer:Buffer.from('Description,Hours\nConfidential real work,2') });
+  await expect(page.getByRole('article').getByText('Confidential real work', { exact:true })).toBeVisible();
+  await page.getByRole('link', { name:'Demo' }).click();
+  await expect(page).toHaveURL(/\/demo$/);
+  await expect(page).toHaveTitle('Demo — Worklog Appendix');
+  await expect(page.getByText('Demo — sample data, nothing is saved')).toBeVisible();
+  await expect(page.getByText('Northstar Studio').first()).toBeVisible();
+  await expect(page.getByText('Confidential real work')).toHaveCount(0);
+});
+
+test('SPA route changes focus and announce the new page heading', async ({ page }) => {
+  await page.goto('/');
+  await page.getByLabel('Main navigation').getByRole('link', { name:'Privacy' }).click();
+  await expect(page.getByRole('heading', { name:'Your worklog stays close to you' })).toBeFocused();
+  await expect(page.locator('#route-announcement')).toHaveText('Privacy — Worklog Appendix loaded');
 });
 
 test('imported CSV text is displayed as text, never interpreted as markup', async ({ page }) => {
@@ -175,6 +231,7 @@ test('the Static Web Apps configuration serves only known SPA routes and a real 
     expect(config.routes).toContainEqual(expect.objectContaining({ route: path, rewrite: `${path}/index.html` }));
   }
   expect(config.responseOverrides['404']).toEqual({ rewrite: '/404.html', statusCode: 404 });
+  expect(config.routes).toContainEqual(expect.objectContaining({ route:'/assets/*.webp', headers:{'Cache-Control':'public, max-age=300, must-revalidate'} }));
 });
 
 test('direct route documents have route-specific canonical metadata before JavaScript runs', () => {
@@ -183,6 +240,11 @@ test('direct route documents have route-specific canonical metadata before JavaS
     expect(source).toContain(`<title>${title}</title>`);
     expect(source).toContain(`https://worklog-appendix.sociobot.in/${path}`);
   }
+  const landing = readFileSync('dist/index.html', 'utf8');
+  expect(landing).toContain('twitter:title');
+  expect(landing).toContain('/assets/social.webp');
+  expect(readFileSync('dist/assets/social.webp').length).toBeGreaterThan(0);
+  expect(readFileSync('dist/sitemap.xml', 'utf8')).toContain('https://worklog-appendix.sociobot.in/workspace');
 });
 
 test('landing has a usable document outline and no serious axe violations', async ({ page }) => {
@@ -199,4 +261,11 @@ test('dark treatment keeps the landing page free of serious axe violations', asy
   await page.goto('/');
   const results = await new AxeBuilder({page}).analyze();
   expect(results.violations.filter(item => ['serious','critical'].includes(item.impact || ''))).toEqual([]);
+});
+
+test('reduced motion uses instant scrolling and control transitions', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion:'reduce' });
+  await page.goto('/');
+  await expect(page.locator('html')).toHaveCSS('scroll-behavior', 'auto');
+  await expect(page.getByRole('button', { name:'Try it with sample data' })).toHaveCSS('transition-duration', '0s');
 });

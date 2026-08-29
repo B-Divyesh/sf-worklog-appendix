@@ -10,8 +10,12 @@ describe('worklog conversion', () => {
   });
   it('rejects malformed and negative hours instead of changing invoice totals', () => {
     for (const value of ['abc', '-2', '2 hours', '']) {
-      expect(() => parseWorklogCsv(`Description,Hours\nTask,${value}`)).toThrow('Row 2 has an invalid Hours value. Use a zero or positive number, then import the file again.');
+      expect(() => parseWorklogCsv(`Description,Hours\nTask,${value}`)).toThrow('Row 2 has an invalid Hours value. Use a zero or positive number (for example 0.5), then import the file again.');
     }
+  });
+  it('accepts a leading-decimal positive number and rejects blank descriptions', () => {
+    expect(parseWorklogCsv('Description,Hours\nHalf hour,.5')[0].hours).toBe(.5);
+    expect(() => parseWorklogCsv('Description,Hours\n,1')).toThrow('Row 2 needs a Description. Add a description, then import the file again.');
   });
   it('produces one matching line for every milestone', () => {
     const lines=invoiceLines(sampleRows);

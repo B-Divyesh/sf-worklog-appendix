@@ -1,4 +1,4 @@
-:root { --sun: #834400; }
+:root { --sun: #834400; --focus: #005a63; }
 
 /* The translucent preview sits over the dark report field, so its labels need
    a darker lagoon treatment than labels on the paper surface. */
@@ -14,7 +14,7 @@
 button:focus-visible,
 a:focus-visible,
 input:focus-visible,
-select:focus-visible { outline-color: #005a63; }
+select:focus-visible { outline-color: var(--focus); }
 
 /* Inline controls stay comfortably tappable without changing their copy. */
 .demo-banner button,
@@ -26,6 +26,16 @@ footer a {
   min-height: 44px;
 }
 .demo-banner button { margin-left: .35rem; }
+
+/* Text-only controls remain as easy to tap as the other controls. */
+.privacy-note a,
+.link-button {
+  display: inline-flex;
+  align-items: center;
+  min-width: 44px;
+  min-height: 44px;
+}
+.link-button { margin-left: 0; }
 
 /* The native chooser stays visible, focusable, and operable by Enter/Space. */
 .file-picker {
@@ -73,6 +83,7 @@ footer a {
     --muted: #c4d9dd;
     --line: #55758a;
     --lagoon: #8ed6dc;
+    --focus: #ffd166;
   }
   body { background: radial-gradient(circle at 84% 13%, #173552 0, transparent 24rem), var(--paper); }
   .file-picker,
@@ -84,4 +95,19 @@ footer a {
   .file-picker input::file-selector-button { background: #31546b; color: var(--ink); }
   .copy { background: #31546b; color: var(--ink); }
   .demo-banner { background: #3d2b0a; color: #fff2cf; border-color: #c88a24; }
+  .preview { background: #10233b; color: #f6f7f2; }
+  .mini-report { background: #173552; color: #f6f7f2; border-color: #55758a; }
+  .mini-report .doc-label,
+  .mini-report .total { color: #9ee0e6; }
+  .mini-report h3 { border-color: #8ed6dc; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition: none !important;
+  }
 }
