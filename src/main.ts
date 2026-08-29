@@ -19,6 +19,7 @@ let settings: Settings = { client:'', invoice:'', period:'', redact:true };
 let message = '';
 let shouldFocusHeading = false;
 let licenseMessage = '';
+let presetDraft = '';
 type LicenseVerdict = { valid: boolean; checkedAt: number; reason?: string };
 type Preset = { id: string; name: string; client: string; invoice: string; period: string };
 type EditorFocus = { attribute: 'data-include' | 'data-milestone'; id: string } | { selector: string };
@@ -133,7 +134,7 @@ function presetPanel() {
   if (isDemo) return '';
   if (!isLicensed()) return `<section class="preset-panel" aria-labelledby="preset-title"><div><p class="eyebrow">CLIENT PRESETS · PAID</p><h2 id="preset-title">Reuse client details</h2><p>Save client, invoice, and billing-period details with a verified $19 one-time license.</p></div><a class="button secondary" href="${checkoutUrl}">Buy client presets — $19</a>${licenseControls()}</section>`;
   const presets = readPresets();
-  return `<section class="preset-panel" aria-labelledby="preset-title"><div><p class="eyebrow">CLIENT PRESETS · LICENSE ACTIVE</p><h2 id="preset-title">Reuse client details</h2><p>Presets stay in this browser and never include worklog rows.</p></div><div class="preset-actions"><label>Preset name<input id="preset-name" autocomplete="off"></label><button class="secondary" id="save-preset">Save current details</button>${presets.length ? `<label>Saved preset<select id="saved-preset">${presets.map(preset=>`<option value="${attr(preset.id)}">${display(preset.name)}</option>`).join('')}</select></label><button class="secondary" id="apply-preset">Apply preset</button><button class="link-button" id="delete-preset">Delete preset</button>` : '<p class="small">No presets saved yet.</p>'}</div>${licenseControls()}</section>`;
+  return `<section class="preset-panel" aria-labelledby="preset-title"><div><p class="eyebrow">CLIENT PRESETS · LICENSE ACTIVE</p><h2 id="preset-title">Reuse client details</h2><p>Presets stay in this browser and never include worklog rows.</p></div><div class="preset-actions"><label>Preset name<input id="preset-name" autocomplete="off" value="${attr(presetDraft)}"></label><button class="secondary" id="save-preset">Save current details</button>${presets.length ? `<label>Saved preset<select id="saved-preset">${presets.map(preset=>`<option value="${attr(preset.id)}">${display(preset.name)}</option>`).join('')}</select></label><button class="secondary" id="apply-preset">Apply preset</button><button class="link-button" id="delete-preset">Delete preset</button>` : '<p class="small">No presets saved yet.</p>'}</div>${licenseControls()}</section>`;
 }
 function filePicker(label: string) { return `<label class="file-picker"><span>${label}</span><input id="csv-file" type="file" accept=".csv,text/csv"></label>`; }
 function appPage(){
@@ -169,7 +170,8 @@ function bindWork(){
   csvFile?.addEventListener('keydown', event=>{
     if(event.key===' ' || event.key==='Enter'){
       event.preventDefault();
-      csvFile.click();
+      if (typeof csvFile.showPicker === 'function') csvFile.showPicker();
+      else csvFile.click();
     }
   });
   csvFile?.addEventListener('change', async event=>{
@@ -186,12 +188,16 @@ function bindWork(){
   document.querySelector('#reset-demo')?.addEventListener('click',()=>{sample();message='Demo reset.';render({selector:'#reset-demo'});});
   document.querySelector('#start-real')?.addEventListener('click',()=>{isDemo=false;rows=[];settings={client:'',invoice:'',period:'',redact:true};message='Your workspace is ready. Import a CSV to begin.';route('/workspace');});
   bindLicense();
+  document.querySelector<HTMLInputElement>('#preset-name')?.addEventListener('input', event=>{
+    presetDraft=(event.target as HTMLInputElement).value;
+  });
   document.querySelector('#save-preset')?.addEventListener('click',()=>{
-    const name = document.querySelector<HTMLInputElement>('#preset-name')?.value.trim() || '';
+    const name = presetDraft.trim();
     if (!name) { message='Name this preset, then save it again.'; render({selector:'#preset-name'}); return; }
     const presets = readPresets();
     presets.push({id:crypto.randomUUID(),name,client:settings.client,invoice:settings.invoice,period:settings.period});
     localStorage.setItem(presetsKey,JSON.stringify(presets));
+    presetDraft='';
     message=`Saved the ${name} client preset.`; render({selector:'#saved-preset'});
   });
   document.querySelector('#apply-preset')?.addEventListener('click',()=>{
@@ -241,12 +247,12 @@ function render(focus?: EditorFocus){
     setTimeout(()=>document.querySelector<HTMLElement>('main h1')?.focus(),0);
     shouldFocusHeading = false;
   }
-  if (focus) requestAnimationFrame(() => {
+  if (focus) {
     const target = 'selector' in focus
       ? document.querySelector<HTMLElement>(focus.selector)
       : [...document.querySelectorAll<HTMLElement>(`[${focus.attribute}]`)].find(control => control.getAttribute(focus.attribute) === focus.id);
     target?.focus();
-  });
+  }
 }
 acceptLicenseFromUrl();
 render();

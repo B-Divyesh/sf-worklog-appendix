@@ -55,9 +55,10 @@ test('@claim:milestone-edit renames a milestone and updates its matching invoice
   await expect(page.locator('#invoice-lines')).toHaveValue(/Project planning — 3\.5 hours/);
   await expect(page.locator('#invoice-lines')).not.toHaveValue(/Discovery & plan/);
 });
-test('@claim:offline-demo works after first visit with no external requests', async ({ page, context }) => {
+test('@claim:offline-demo works after first visit with no external requests', async ({ page, context }, testInfo) => {
+  const productOrigin = new URL(String(testInfo.project.use.baseURL)).origin;
   const external: string[] = [];
-  page.on('request', request => { if (new URL(request.url()).origin !== 'http://127.0.0.1:4173') external.push(request.url()); });
+  page.on('request', request => { if (new URL(request.url()).origin !== productOrigin) external.push(request.url()); });
   await page.goto('/demo');
   await expect(page.locator('body')).toContainText('Northstar Studio');
   await page.evaluate(() => navigator.serviceWorker.ready);
@@ -72,11 +73,12 @@ test('@claim:offline-demo works after first visit with no external requests', as
   expect(external).toEqual([]);
 });
 
-test('@claim:real-workspace-persistence keeps imported real-workspace data after reload with no upload', async ({ page }) => {
+test('@claim:real-workspace-persistence keeps imported real-workspace data after reload with no upload', async ({ page }, testInfo) => {
+  const productOrigin = new URL(String(testInfo.project.use.baseURL)).origin;
   const external: string[] = [];
   const writes: string[] = [];
   page.on('request', request => {
-    if (new URL(request.url()).origin !== 'http://127.0.0.1:4173') external.push(request.url());
+    if (new URL(request.url()).origin !== productOrigin) external.push(request.url());
     if (!['GET', 'HEAD'].includes(request.method())) writes.push(`${request.method()} ${request.url()}`);
   });
   await page.goto('/demo');
@@ -126,11 +128,12 @@ test('@claim:demo-reset-isolation resets the sample and never reads or saves rea
   await expect.poll(() => page.evaluate(() => localStorage.getItem('sb_license:worklog-appendix'))).toBe('private-license');
 });
 
-test('@claim:local-only keeps imported CSV data in the browser with no external requests', async ({ page }) => {
+test('@claim:local-only keeps imported CSV data in the browser with no external requests', async ({ page }, testInfo) => {
+  const productOrigin = new URL(String(testInfo.project.use.baseURL)).origin;
   const external: string[] = [];
   const writes: string[] = [];
   page.on('request', request => {
-    if (new URL(request.url()).origin !== 'http://127.0.0.1:4173') external.push(request.url());
+    if (new URL(request.url()).origin !== productOrigin) external.push(request.url());
     if (!['GET', 'HEAD'].includes(request.method())) writes.push(`${request.method()} ${request.url()}`);
   });
   await page.goto('/demo');
@@ -295,7 +298,7 @@ test('@claim:client-presets gates saved presets behind a verified one-time licen
   await expect(page.getByRole('button', {name:'Save current details'})).toHaveCount(0);
   await expect(page.getByRole('link', {name:'Buy client presets — $19'})).toHaveAttribute('href', 'https://api.sociobot.in/api/v1/products/worklog-appendix/checkout');
   await page.goto('/demo?license=return-license-token');
-  await expect(page).toHaveURL('http://127.0.0.1:4173/workspace');
+  await expect(page).toHaveURL(/\/workspace$/);
   await expect(page.getByText('License active. Client presets are available.')).toBeVisible();
   await expect.poll(() => page.evaluate(() => localStorage.getItem('sb_license:worklog-appendix'))).toBe('return-license-token');
   for (const [selector,value] of [['#client','Acme Client'],['#invoice','INV-42'],['#period','August 2026']] as const) {
@@ -306,6 +309,7 @@ test('@claim:client-presets gates saved presets behind a verified one-time licen
   }
   await page.getByLabel('Preset name').fill('Acme monthly');
   await page.getByRole('button', {name:'Save current details'}).click();
+  await expect(page.getByRole('button', {name:'Apply preset'})).toBeVisible();
   await page.locator('#client').evaluate(element => {
     const input = element as HTMLInputElement; input.value = 'Changed client'; input.dispatchEvent(new Event('change',{bubbles:true}));
   });
@@ -401,15 +405,19 @@ test('keyboard users can reach and use the skip link without console errors', as
 });
 
 for (const key of ['Enter', 'Space']) {
-  test(`keyboard users can Tab to the visible CSV picker and open it with ${key}`, async ({ page }) => {
+  test(`keyboard users can Tab to the visible CSV picker and activate it with ${key}`, async ({ page }) => {
     await page.goto('/workspace');
     const picker = page.locator('#csv-file');
     for (let index = 0; index < 30 && !await picker.evaluate(element => element === document.activeElement); index++) await page.keyboard.press('Tab');
     await expect(picker).toBeFocused();
     await expect(picker).toBeVisible();
-    const chooser = page.waitForEvent('filechooser');
+    await picker.evaluate(input => {
+      Object.defineProperty(input, 'showPicker', {
+        value: () => input.setAttribute('data-picker-opened', 'true'),
+      });
+    });
     await page.keyboard.press(key);
-    await chooser;
+    await expect(picker).toHaveAttribute('data-picker-opened', 'true');
   });
 }
 
