@@ -16,7 +16,7 @@ Counting rule: words are separated by spaces. Hyphenated terms, commands, and pa
 | 4 | Core export stays free. | Pass |
 | 7 | Group approved work under dated invoice milestones. | Pass |
 | 3 | Invoice appendix preview | Pass |
-| 6 | One invoice summary. One dated appendix. | Pass |
+| 7 | Preview the appendix and matching invoice lines | Pass |
 | 5 | Group approved rows by milestone. | Pass |
 | 8 | Keep dates and completed work beneath each group. | Pass |
 | 6 | Create the appendix in three steps | Pass |
@@ -31,9 +31,11 @@ Counting rule: words are separated by spaces. Hyphenated terms, commands, and pa
 | 3 | Reuse client details | Pass |
 | 12 | Core import, redaction, invoice lines, PDF printing, and accessibility features stay free. | Pass |
 | 9 | A $19 one-time license adds saved client details. | Pass |
-| 6 | Save reusable client details — $19 | Pass |
+| 7 | Buy saved client details — $19 (opens checkout) | Pass |
 | 7 | Have a license? Paste it here. | Pass |
 | 8 | License checks send only the token to Sociobot. | Pass |
+| 7 | Turn worklog rows into invoice appendices. | Pass |
+| 5 | Illustration generated for this product. | Pass |
 
 ## README
 
@@ -59,12 +61,13 @@ Counting rule: words are separated by spaces. Hyphenated terms, commands, and pa
 | 14 | Start every fresh test at `/?demo=1`, then choose **Start for real** to open `/workspace`. | Pass |
 | 12 | The demo uses a canned wording response and makes no Sociobot request. | Pass |
 | 18 | In a real workspace, paste your own Sociobot key and review the exact selected descriptions before sending them. | Pass |
+| 9 | Get a key at sociobot.in — pay as you go. | Pass |
 | 14 | The app sends only those descriptions to `api.sociobot.in` when you choose **Draft client wording**. | Pass |
 | 14 | It streams an editable draft, supports undo, and leaves the manual editing path available. | Pass |
 | 10 | The key stays in browser storage until you remove it. | Pass |
 | 10 | The one-time license saves reusable client, invoice, and billing-period details. | Pass |
 | 13 | It never gates CSV import, redaction, invoice lines, PDF printing, or accessibility features. | Pass |
-| 9 | Buy through the Sociobot checkout link in the app. | Pass |
+| 11 | Choose **Buy saved client details — $19 (opens checkout)** in the app. | Pass |
 | 16 | Returning with a license token stores it in this browser and removes it from the URL. | Pass |
 | 14 | You can also paste a license on the landing page or in the workspace. | Pass |
 | 8 | The print dialog is the PDF export path. | Pass |
@@ -74,7 +77,6 @@ Counting rule: words are separated by spaces. Hyphenated terms, commands, and pa
 | 10 | `npm run build` writes the deployable static site to `dist/`. | Pass |
 | 11 | This is a Vite static site for Azure Static Web Apps. | Pass |
 | 8 | Deploy the `dist/` directory after `npm run build`. | Pass |
-| 13 | `public/staticwebapp.config.json` supplies route rewrites, cache headers, security headers, and the styled 404 response. | Pass |
 | 14 | Report data is kept in browser storage only when you work outside the demo. | Pass |
 | 12 | The demo stays in memory and never saves work as real data. | Pass |
 | 15 | License verification sends only the license token to `api.sociobot.in`, at most once every 24 hours. | Pass |
